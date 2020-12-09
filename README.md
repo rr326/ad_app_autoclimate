@@ -42,7 +42,7 @@ When you set `test_mode: true`, it will run the automation and print to teh log,
 1. [AdPlus](https://github.com/rr326/adplus)
 2. [MQTT](https://www.home-assistant.io/integrations/mqtt/) - Installed, working, integrated to Appdaemon, and tested. Only required if you want the abilty to trigger the all_off() functionality by sending an evetn to `app.autoclimate_turn_off_all`.
 ## Configuration
-See autoclimate.sample.yml
+See [autoclimate.yaml.sample](./autoclimate.yaml.sample)
 
 ## Exposed State
     app.{name}_state:
