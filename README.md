@@ -1,4 +1,4 @@
-# AutoClimateApp
+# AutoClimateApp for AppDaemon
 This provides several services for thermostat management.
 
 The key goals are to enable:
