@@ -1,5 +1,5 @@
 # AutoClimateApp
-This provides serveral services for thermostat management.
+This provides several services for thermostat management.
 
 The key goals are to enable:
 
