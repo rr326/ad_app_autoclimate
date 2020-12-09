@@ -37,6 +37,10 @@ and when it is triggered, the app will set all climates to their "off" state.
 (This is for advanced users and developers.)  
 When you set `test_mode: true`, it will run the automation and print to teh log, but not actually take the actions (like turning off the thermostat.) If you set mocks (see `autoclimate.yaml.sample`), it will set each entity to the given state, wait a second, and then run the next mock. 
 
+## Requirements
+
+1. [AdPlus](https://github.com/rr326/adplus)
+2. [MQTT](https://www.home-assistant.io/integrations/mqtt/) - Installed, working, integrated to Appdaemon, and tested. Only required if you want the abilty to trigger the all_off() functionality by sending an evetn to `app.autoclimate_turn_off_all`.
 ## Configuration
 See autoclimate.sample.yml
 
