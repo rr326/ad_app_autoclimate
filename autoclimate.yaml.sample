@@ -1,0 +1,85 @@
+AutoClimate:
+  disable: true ######### CHANGE TO false #########
+
+  module: autoclimate
+  class: AutoClimateApp
+  name: autoclimate # Name for *this* instance of the AutoClimate app.
+  poll_frequency: 1 # hours
+  test_mode: false # For testing
+
+  # Required. 
+  # This names the thermostat entities you will track (climate.xxx)
+  # and what constitutes "Off"
+  off_rules:
+    climate.ecobee1:
+        off_state: "away"
+        off_temp:  55
+    climate.nuheat1:
+        off_state: "perm_hold"              
+        off_temp: 41
+        perm_hold_string: "Permanent Hold"
+    climate.ecobee2:
+        off_state: "off"    
+    
+  # Optional
+  auto_off:
+    climate.ecobee1:
+        occupancy_sensor: binary_sensor.ecobee1_occupancy
+        unoccupied_for: 36 
+    climate.nuheat1:
+        occupancy_sensor: binary_sensor.ecobee1_occupancy
+        unoccupied_for: 36
+    climate.ecobee2:
+        occupancy_sensor: binary_sensor.ecobee2_occupancy
+        unoccupied_for: 4
+
+
+
+
+  # For testing. If test_mode == True      
+  # You should probably ignore this!
+  mocks:
+    - entity_id: climate.ecobee1
+      mock_attributes: {
+        "temperature": 62,
+        "preset_mode": "Sleep",
+      }
+    - entity_id: climate.ecobee1
+      mock_attributes: {
+        "temperature": 62,
+        "preset_mode": "Away",
+      }   
+    - entity_id: climate.ecobee1
+      mock_attributes: {
+        "temperature": 40,
+        "preset_mode": "Away",
+      }         
+    - entity_id: climate.ecobee1
+      mock_attributes: {
+        "temperature": null,
+      }         
+    - entity_id: climate.ecobee2
+      mock_attributes: {
+        "temperature": null,
+      }  
+    - entity_id: climate.ecobee2
+      mock_attributes: {
+        "temperature": 55,
+        "preset_mode": "Away",
+      }                          
+    - entity_id: climate.nuheat1
+      mock_attributes: {
+        "temperature": 41,
+        "preset_mode": "Permanent Hold",
+      }  
+    - entity_id: climate.nuheat1
+      mock_attributes: {
+        "temperature": 55,
+        "preset_mode": "Permanent Hold",
+      }                    
+    - entity_id: climate.nuheat1
+      mock_attributes: {
+        "temperature": 41,
+        "preset_mode": "Sleep",
+      }        
+     
