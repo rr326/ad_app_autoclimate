@@ -17,6 +17,10 @@ With this, I press one button to turn it all off when I leave. If I forget, afte
 
 Finally, this also enables cool dashboard monitoring (with [Lovelace](https://www.home-assistant.io/lovelace/)) that shows the temperature, if it is "offline" and a color for red (bad), yellow (warning), or green (good).
 
+### Sample Dashboard
+![Dashboard](dashboard.png)
+
+This uses [custom-button-card](https://github.com/custom-cards/button-card), [card-mod](https://github.com/thomasloven/lovelace-card-mod), and my forked version of bignumber - [bignumber-fork](https://github.com/rr326/bignumber-card).
 ## Features
 
 1. **Summarized State**  
