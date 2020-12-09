@@ -45,18 +45,36 @@ When you set `test_mode: true`, it will run the automation and print to teh log,
 See [autoclimate.yaml.sample](./autoclimate.yaml.sample)
 
 ## Exposed State
-    app.{name}_state:
-        state: (one of)
-            - "on" (running)
-            - "off" (all off properly)
-            - "offline" (any offline)
-        attributes: { (dict of key: value)
-            entity1_offline: true/false
-            entity1_state: offline, on, off
-            entity1_unoccupied: offline / false (present) / <float hours unoccupied>
-            entity1_state_reason: string (Help text on why state is the way it is)
-            entity2...
-        }
+The app will expose a helpful state object under: `app.{name}_state` where
+name is defined in `autoclimate.yaml`. (For instance: `app.autoclimate_state`.)
+
+Here is an example:
+```yaml
+# app.autoclimate_state, in yaml
+friendly_name: autoclimate State
+summary_state: offline
+ecobee1_offline: false
+ecobee1_state: 'off'
+ecobee1_unoccupied: 2.62
+ecobee1_state_reason: 'Away mode at proper temp: 55'
+nuheat1_offline: true
+nuheat1_state: offline
+nuheat1_unoccupied: offline
+ecobee2_offline: false
+ecobee2_state: 'off'
+ecobee2_unoccupied: 2.62
+ecobee2_state_reason: Thermostat is off
+```
+
+### Details
+|field|type|values|explanation|
+|-|-|-|-|
+|friendly_name|string|{name} State|
+|summary_state|string|on \| off \| offline \| error| Summarized state across all entities
+|entity_offline|boolean|true \| false|
+|entity_state|string|on \| off \| offline \| error | Summarized state for this entity
+|entity_state_reason|string|*explanation*|Explanation of why. Helpful for debugging.
+|entity_unoccupied|float|*duration*|How long the autooff sensor has shown unoccupied.
 
 ## MQ Events
     listens:
