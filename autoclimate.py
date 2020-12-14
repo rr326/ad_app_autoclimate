@@ -398,14 +398,12 @@ class AutoClimateApp(adplus.MqPlus):
         return "off", min_time_off, None
 
     def get_unoccupied_time_for(self, entity):
-        mapper = {
-            "climate.cabin": "binary_sensor.cabin_occupancy",
-            "climate.gym": "binary_sensor.gym_occupancy",
-            "climate.seattle": "binary_sensor.seattle_occupancy",
-            "climate.tv_room": "binary_sensor.tv_room_occupancy",
-            "climate.master_bath_floor_heater": "binary_sensor.cabin_occupancy",
-        }
-        oc_sensor = mapper[entity]
+        try:
+            oc_sensor = self.argsn["auto_off"][entity]["occupancy_sensor"]
+        except KeyError:
+            self.error(f'Unable to get occupancy_sensor for {entity}')
+            return None, None, None
+
         state, duration_off, last_on_date = self.occupancy_length(oc_sensor)
         return state, duration_off, last_on_date
 
