@@ -1,6 +1,7 @@
 import datetime as dt
-from typing import Tuple
+from typing import Optional, Tuple
 import json # noqa
+import math
 
 import adplus
 
@@ -10,6 +11,7 @@ SCHEMA = {
     "name": {"required": True, "type": "string"},
     "poll_frequency": {"required": True, "type": "number"},
     "test_mode": {"required": False, "type": "boolean", "default": False},
+    "create_temp_sensors": {"required": True, "type": "boolean"},
     "off_rules": {
         "required": True,
         "type": "dict",
@@ -69,8 +71,10 @@ class AutoClimateApp(adplus.MqPlus):
         self.test_mode = self.argsn.get("test_mode")
         self.appname = self.argsn["name"]
         self.poll_frequency = self.argsn["poll_frequency"]
+        self.create_temp_sensors = self.argsn["create_temp_sensors"]
         self.mock_data = None
         self.state = {}
+        self._current_temps = {} # {climate: current_temp}
         self.APP_STATE = f"app.{self.appname}_state"
         self.TRIGGER_HEAT_OFF = f"app.{self.appname}_turn_off_all"
 
@@ -187,6 +191,13 @@ class AutoClimateApp(adplus.MqPlus):
             self.APP_STATE, state=self.autoclimate_overall_state, attributes=data
         )
 
+        if self.create_temp_sensors:
+            for climate, current_temp in self._current_temps.items():
+                sensor_name = f'sensor.{self.appname}_{name(climate)}_temperature'
+                self.set_state(sensor_name, state=current_temp)
+                self.log(f'** Sensor State: {sensor_name} = {current_temp}')
+                
+
         # self.log(
         #     f"DEBUG LOGGING\nPublished State\n============\n{json.dumps(data, indent=2)}"
         # )
@@ -196,7 +207,7 @@ class AutoClimateApp(adplus.MqPlus):
 
         self.publish_state()
 
-    def get_entity_state(self, entity) -> Tuple[str, str]:
+    def get_entity_state(self, entity) -> Tuple[str, str, float]:
         """
         Returns: on/off/offline, reason
 
@@ -215,11 +226,15 @@ class AutoClimateApp(adplus.MqPlus):
                 attributes = attributes.copy()
                 attributes.update(mock_attributes)
 
+        # Get current temperature
+        current_temp = attributes.get("current_temperature", math.nan)
+
         #
         # Offline?
         #
         if "temperature" not in attributes:
-            return "offline", "offline"
+            return "offline", "offline", current_temp
+
 
         #
         # Heat is on?
@@ -229,35 +244,36 @@ class AutoClimateApp(adplus.MqPlus):
 
         if temp is None:
             if off_rule["off_state"] == "off":
-                return "off", "Thermostat is off"
+                return "off", "Thermostat is off", current_temp
             else:
-                return "error_off", "Thermostat is off but should not be!"
+                return "error_off", "Thermostat is off but should not be!", current_temp
         elif off_rule["off_state"] == "off":
-            return "on", "Thermostat is not off, but it should be"
+            return "on", "Thermostat is not off, but it should be", current_temp
         elif off_rule["off_state"] == "away":
             if attributes.get("preset_mode").lower() != "away":
-                return "on", "Not away mode, but should be"
+                return "on", "Not away mode, but should be", current_temp
             else:  # Away mode
                 if (off_temp := off_rule.get("off_temp")) is None:
-                    return "off", "Away mode."
+                    return "off", "Away mode.", current_temp
                 else:
                     if temp == off_temp:
-                        return "off", f"Away mode at proper temp: {off_temp}"
+                        return "off", f"Away mode at proper temp: {off_temp}", current_temp
                     else:
                         return (
                             "on",
                             f"Away mode but improper temp. Should be {off_temp}. Actual: {temp}.",
+                            current_temp
                         )
 
         elif off_rule["off_state"] == "perm_hold":
             if attributes.get("preset_mode") != off_rule["perm_hold_string"]:
-                return "on", f"Not permanent hold: {attributes.get('preset_mode')}"
+                return "on", f"Not permanent hold: {attributes.get, current_temp('preset_mode')}"
             elif temp > off_rule["off_temp"]:
-                return "on", f"Perm hold at {temp}. Should be <= {off_rule['off_temp']}"
+                return "on", f"Perm hold at {temp}. Should be <= {off_rule['off_temp']}", current_temp
             else:
-                return "off", f"Perm hold at {temp}"
+                return "off", f"Perm hold at {temp}", current_temp
 
-        return "none", "error - should not be here"
+        return "none", "error - should not be here", current_temp
 
     def get_all_entities_state(self, *args):
         """
@@ -267,7 +283,13 @@ class AutoClimateApp(adplus.MqPlus):
             * None = system is off
         """
         for entity in self.climates:
-            summarized_state, state_reason = self.get_entity_state(entity)
+            summarized_state, state_reason, current_temp = self.get_entity_state(entity)
+
+            #
+            # Current_temp
+            # 
+            self._current_temps[entity] = current_temp
+
 
             #
             # Offline
@@ -302,6 +324,8 @@ class AutoClimateApp(adplus.MqPlus):
                         self.state[entity]["unoccupied"] = duration_off
                 except Exception as err:
                     self.error(f"Error getting occupancy for {entity}. Err: {err}")
+
+
 
     @property
     def autoclimate_overall_state(self):

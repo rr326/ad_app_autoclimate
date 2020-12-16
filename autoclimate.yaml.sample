@@ -6,6 +6,7 @@ AutoClimate:
   name: autoclimate # Name for *this* instance of the AutoClimate app.
   poll_frequency: 1 # hours
   test_mode: false # For testing
+  create_temp_sensors: true # Fixes a bug that offline ecobees show last temp in temp sensor
 
   # Required. 
   # This names the thermostat entities you will track (climate.xxx)

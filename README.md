@@ -33,9 +33,13 @@ This will turn off climates when unoccupied for X time. "Off" could be "Away" mo
 4. **Turn Heat Off MQ Event**  
 You can register an MQ event (such as `app.autoclimate_turn_off_all`)
 and when it is triggered, the app will set all climates to their "off" state.
-5. **Test_mode with Mocks**  
+5. **Extra Temp Sensors**  
+    * If you set `create_temp_sensors: true`, this will create a new temp sensor for each climate with a name like `sensor.autoclimate_house_temperature`. This is the same as normal temperature sensors except if the `climate` is offline, this sensor will report a null value.
+    * The existing sensors defined by the integrations will always show the last value, even if the sensor has been down for a week! [Github Issue](https://github.com/home-assistant/core/issues/43897)
+6. **Test_mode with Mocks**  
 (This is for advanced users and developers.)  
-When you set `test_mode: true`, it will run the automation and print to teh log, but not actually take the actions (like turning off the thermostat.) If you set mocks (see `autoclimate.yaml.sample`), it will set each entity to the given state, wait a second, and then run the next mock. 
+When you set `test_mode: true`, it will run the automation and print to teh log, but not actually take the actions (like turning off the thermostat.) If you set mocks (see `autoclimate.yaml.sample`), it will set each entity to the given state, wait a second, and then run the next mock.
+
 
 ## Requirements
 
@@ -82,6 +86,14 @@ ecobee2_state_reason: Thermostat is off
         ("name" from autoclimate.yaml "name")
     fires:
         None
+
+## Extra Temp Sensors
+See the description above in Features. 
+A few sub points:
+
+* The sensor name is: `sensor.{config.name}_{climate_entity_name}_temperature`
+* Return value when offline: `math.nan`
+* [Github Issue](https://github.com/home-assistant/core/issues/43897)
 
 ## Integrations
 This has been tested with:
