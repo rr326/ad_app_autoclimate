@@ -1,7 +1,7 @@
 import datetime as dt
-from typing import Optional, Tuple
-import json # noqa
+import json  # noqa
 import math
+from typing import Tuple
 
 import adplus
 
@@ -74,7 +74,7 @@ class AutoClimateApp(adplus.MqPlus):
         self.create_temp_sensors = self.argsn["create_temp_sensors"]
         self.mock_data = None
         self.state = {}
-        self._current_temps = {} # {climate: current_temp}
+        self._current_temps = {}  # {climate: current_temp}
         self.APP_STATE = f"app.{self.appname}_state"
         self.TRIGGER_HEAT_OFF = f"app.{self.appname}_turn_off_all"
 
@@ -164,8 +164,8 @@ class AutoClimateApp(adplus.MqPlus):
 
         if self.create_temp_sensors:
             for climate, current_temp in self._current_temps.items():
-                sensor_name = f'sensor.{self.appname}_{name(climate)}_temperature'
-                self.set_state(sensor_name, state=current_temp)                
+                sensor_name = f"sensor.{self.appname}_{name(climate)}_temperature"
+                self.set_state(sensor_name, state=current_temp)
 
         # self.log(
         #     f"DEBUG LOGGING\nPublished State\n============\n{json.dumps(data, indent=2)}"
@@ -204,7 +204,6 @@ class AutoClimateApp(adplus.MqPlus):
         if "temperature" not in attributes:
             return "offline", "offline", current_temp
 
-
         #
         # Heat is on?
         #
@@ -226,19 +225,30 @@ class AutoClimateApp(adplus.MqPlus):
                     return "off", "Away mode.", current_temp
                 else:
                     if temp == off_temp:
-                        return "off", f"Away mode at proper temp: {off_temp}", current_temp
+                        return (
+                            "off",
+                            f"Away mode at proper temp: {off_temp}",
+                            current_temp,
+                        )
                     else:
                         return (
                             "on",
                             f"Away mode but improper temp. Should be {off_temp}. Actual: {temp}.",
-                            current_temp
+                            current_temp,
                         )
 
         elif off_rule["off_state"] == "perm_hold":
             if attributes.get("preset_mode") != off_rule["perm_hold_string"]:
-                return "on", f"Not permanent hold: {attributes.get, current_temp('preset_mode')}"
+                return (
+                    "on",
+                    f"Not permanent hold: {attributes.get, current_temp('preset_mode')}",
+                )
             elif temp > off_rule["off_temp"]:
-                return "on", f"Perm hold at {temp}. Should be <= {off_rule['off_temp']}", current_temp
+                return (
+                    "on",
+                    f"Perm hold at {temp}. Should be <= {off_rule['off_temp']}",
+                    current_temp,
+                )
             else:
                 return "off", f"Perm hold at {temp}", current_temp
 
@@ -256,9 +266,8 @@ class AutoClimateApp(adplus.MqPlus):
 
             #
             # Current_temp
-            # 
+            #
             self._current_temps[entity] = current_temp
-
 
             #
             # Offline
@@ -293,8 +302,6 @@ class AutoClimateApp(adplus.MqPlus):
                         self.state[entity]["unoccupied"] = duration_off
                 except Exception as err:
                     self.error(f"Error getting occupancy for {entity}. Err: {err}")
-
-
 
     @property
     def autoclimate_overall_state(self):
@@ -424,7 +431,7 @@ class AutoClimateApp(adplus.MqPlus):
         try:
             oc_sensor = self.argsn["auto_off"][entity]["occupancy_sensor"]
         except KeyError:
-            self.error(f'Unable to get occupancy_sensor for {entity}')
+            self.error(f"Unable to get occupancy_sensor for {entity}")
             return None, None, None
 
         state, duration_off, last_on_date = self.occupancy_length(oc_sensor)
