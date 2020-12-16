@@ -107,35 +107,6 @@ class AutoClimateApp(adplus.MqPlus):
         if self.test_mode:
             self.run_in(self.init_mocks, 0)
 
-        self.init_test_state_listeners()
-
-    def init_test_state_listeners(self):
-        climate_id = "climate.seattle"
-        sensor_id = "sensor.temp_seattle"
-
-        self.listen_state(
-                self.cb_test_state_listeners, entity=climate_id, attribute="all"
-            )
-        self.listen_state(
-                self.cb_test_state_listeners, entity=sensor_id, attribute="all"
-            )
-        self.cb_test_state_listeners(entity=climate_id, attribute=None, old=None, new = self.get_state(entity_id=climate_id, attribute="all"), kwargs="initialize")
-        self.cb_test_state_listeners(entity=sensor_id, attribute=None, old=None, new = self.get_state(entity_id=sensor_id, attribute="all"), kwargs="initialize")
-        self.log('init_test_state_listeners complete')
-
-
-    def cb_test_state_listeners(self, entity, attribute, old, new, kwargs):
-        # self.log(f'## cb_test_state_liseners: {entity} -- {attribute} -- {old} -- {new} -- {kwargs}')
-        if entity == "climate.seattle":
-            val = new['attributes'].get('current_temperature')
-        elif entity == 'sensor.temp_seattle':
-            val = new.get('state')
-        else:
-            raise RuntimeError('Programming error')
-
-        self.log(f'### {entity:20} -- {float(val):.1f} -- {new["last_updated"]}')
-
-
     def extra_validation(self, args):
         # Validation that Cerberus doesn't do well
         for climate, rule in args["off_rules"].items():
@@ -194,9 +165,7 @@ class AutoClimateApp(adplus.MqPlus):
         if self.create_temp_sensors:
             for climate, current_temp in self._current_temps.items():
                 sensor_name = f'sensor.{self.appname}_{name(climate)}_temperature'
-                self.set_state(sensor_name, state=current_temp)
-                self.log(f'** Sensor State: {sensor_name} = {current_temp}')
-                
+                self.set_state(sensor_name, state=current_temp)                
 
         # self.log(
         #     f"DEBUG LOGGING\nPublished State\n============\n{json.dumps(data, indent=2)}"
