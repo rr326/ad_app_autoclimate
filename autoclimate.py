@@ -78,15 +78,10 @@ class AutoClimateApp(adplus.MqPlus):
         self.APP_STATE = f"app.{self.appname}_state"
         self.TRIGGER_HEAT_OFF = f"app.{self.appname}_turn_off_all"
 
-        # Initialize
-        self.set_state(
-            self.APP_STATE,
-            state="None",
-            attributes={"friendly_name": f"{self.appname} State"},
-        )
-
         self.climates = list(self.argsn["off_rules"].keys())
         self.log(f"Climates controlled: {self.climates}")
+
+        self.init_create_states()
         self.init_states()
 
         self.mq_listen_event(self.turn_off_all, self.TRIGGER_HEAT_OFF)
@@ -124,6 +119,29 @@ class AutoClimateApp(adplus.MqPlus):
                     f"Probable misconfiguration (bad entity): could not get state for entity: {climate}"
                 )
 
+    def init_create_states(self):
+        # APP_STATE
+        self.set_state(
+            self.APP_STATE,
+            state="None",
+            attributes={"friendly_name": f"{self.appname} State"},
+        )
+
+        # Temperature Sensors
+        if self.create_temp_sensors:
+            for climate in self.climates:
+                sensor_name = self.sensor_name(climate)
+                self.update_state(
+                    sensor_name,
+                    state=math.nan,
+                    attributes={
+                        "unit_of_measurement": "°F",
+                        "freindly_name": f"Temperatue for {self.climate_name(climate)}",
+                        "device_class": "temperature",
+                    },
+                )
+                self.log(f"Created sensor for {sensor_name}")
+
     def init_states(self):
         for climate in self.climates:
             self.state[climate] = {
@@ -139,6 +157,13 @@ class AutoClimateApp(adplus.MqPlus):
                 self.get_and_publish_state, entity=climate, attribute="all"
             )
 
+    @staticmethod
+    def climate_name(entity):
+        return entity.split(".")[1]
+
+    def sensor_name(self, entity):
+        return f"sensor.{self.appname}_{self.climate_name(entity)}_temperature"
+
     def publish_state(
         self,
     ):
@@ -147,11 +172,8 @@ class AutoClimateApp(adplus.MqPlus):
         to APP_STATE (eg: app.autoclimate_state)
         """
 
-        def name(entity):
-            return entity.split(".")[1]
-
         data = {
-            f"{name(entity)}_{key}": value
+            f"{self.climate_name(entity)}_{key}": value
             for (entity, rec) in self.state.items()
             for (key, value) in rec.items()
         }
@@ -164,8 +186,8 @@ class AutoClimateApp(adplus.MqPlus):
 
         if self.create_temp_sensors:
             for climate, current_temp in self._current_temps.items():
-                sensor_name = f"sensor.{self.appname}_{name(climate)}_temperature"
-                self.set_state(sensor_name, state=current_temp)
+                sensor_name = self.sensor_name(climate)
+                self.update_state(sensor_name, state=current_temp)
 
         # self.log(
         #     f"DEBUG LOGGING\nPublished State\n============\n{json.dumps(data, indent=2)}"
