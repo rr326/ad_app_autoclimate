@@ -263,7 +263,8 @@ class AutoClimateApp(adplus.MqPlus):
             if attributes.get("preset_mode") != off_rule["perm_hold_string"]:
                 return (
                     "on",
-                    f"Not permanent hold: {attributes.get, current_temp('preset_mode')}",
+                    f"Not proper permanent hold. Actual: {attributes.get('preset_mode')} -- {attributes.get('temperature')}",
+                    current_temp
                 )
             elif temp > off_rule["off_temp"]:
                 return (
@@ -362,14 +363,14 @@ class AutoClimateApp(adplus.MqPlus):
 
         if off_rule["off_state"] == "off":
             retval = self.call_service("climate/turn_off", entity_id=entity)
-            self.lb_log(f"{entity} - Turn off. retval: {retval}")
+            self.lb_log(f"{entity} - Turn off")
         elif off_rule["off_state"] == "away":
             retval = self.call_service(
                 "climate/set_preset_mode",
                 entity_id=entity,
                 preset_mode="Away",
             )
-            self.lb_log(f"{entity} -  Set away mode. retval: {retval}")
+            self.lb_log(f"{entity} -  Set away mode")
         elif off_rule["off_state"] == "perm_hold":
             retval1 = self.call_service(
                 "climate/set_temperature",
