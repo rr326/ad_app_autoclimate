@@ -206,7 +206,7 @@ class AutoClimateApp(adplus.MqPlus):
         """
 
         state = self.get_state(entity, attribute="all")
-        attributes = state["attributes"]
+        attributes = state["attributes"] if state else {}
 
         if self.test_mode and self.mock_data:
             if self.mock_data.get("entity_id") == entity:
