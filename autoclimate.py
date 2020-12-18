@@ -404,16 +404,6 @@ class AutoClimateApp(adplus.MqPlus):
     def occupancy_length(self, entity_id, days=10):
         """
         returns: state (on/off), duration_off (hours float / None), last_on_date (datetime, None)
-        {
-            "entity_id": "binary_sensor.seattle_occupancy",
-            "state": "off",
-            "attributes": {
-                "friendly_name": "Seattle Occupancy",
-                "device_class": "occupancy"
-            },
-            "last_changed": "2020-10-28T13:10:47.384057+00:00",
-            "last_updated": "2020-10-28T13:10:47.384057+00:00"
-        }
         """
         hass = self.get_plugin_api("HASS")
         data = hass.get_history(entity_id=entity_id, days=days)
