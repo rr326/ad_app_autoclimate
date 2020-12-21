@@ -1,8 +1,8 @@
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 import math
 import datetime as dt
-from adplus import MqPlus
-from appdaemon.adbase import ADBase
+from appdaemon.adapi import ADAPI
+from appdaemon.plugins.hass.hassapi import Hass
 
 """
 # TODO
@@ -14,7 +14,7 @@ def offstate(
     entity: str,
     stateobj: dict,
     config: dict,
-    mqapi: MqPlus,
+    adapi: ADAPI,
     test_mode: bool = False,
     mock_data: Optional[dict] = None,
 ) -> Tuple[str, str, float]:
@@ -24,8 +24,8 @@ def offstate(
     if test_mode it will merge self.mocked_attributes to the state
 
     This tests to see if a climate entity's state is what it should be.
-    The logic is pretty complex due to challenges with offline/online, 
-    priorities, differences in behavior from different thermostats, etc. 
+    The logic is pretty complex due to challenges with offline/online,
+    priorities, differences in behavior from different thermostats, etc.
     """
 
     attributes = stateobj["attributes"] if stateobj else {}
@@ -34,7 +34,7 @@ def offstate(
     if test_mode and mock_data:
         if mock_data.get("entity_id") == entity:
             mock_attributes = mock_data["mock_attributes"]
-            mqapi.info(
+            adapi.info(
                 f"get_entity_state: using MOCKED attributes for entity {entity}: {mock_attributes}"
             )
             attributes = attributes.copy()
@@ -110,7 +110,7 @@ def offstate(
 
 
 def turn_off_entity(
-    mqapi: MqPlus,
+    adapi: ADAPI,
     entity: str,
     stateobj: dict,
     config: dict,
@@ -120,43 +120,43 @@ def turn_off_entity(
     attributes = stateobj["attributes"]
 
     if "temperature" not in attributes:
-        mqapi.log(f"{entity} - Offline. Can not turn off.")
+        adapi.log(f"{entity} - Offline. Can not turn off.")
         return
 
     if not config:
-        mqapi.error(f"No off_rule for entity: {entity}. Can not turn off.")
+        adapi.error(f"No off_rule for entity: {entity}. Can not turn off.")
         return
 
     if config["off_state"] == "off":
-        retval = mqapi.call_service("climate/turn_off", entity_id=entity)
-        mqapi.lb_log(f"{entity} - Turn off")
+        retval = adapi.call_service("climate/turn_off", entity_id=entity)
+        adapi.lb_log(f"{entity} - Turn off")
     elif config["off_state"] == "away":
-        retval = mqapi.call_service(
+        retval = adapi.call_service(
             "climate/set_preset_mode",
             entity_id=entity,
             preset_mode="Away",
         )
-        mqapi.lb_log(f"{entity} -  Set away mode")
+        adapi.lb_log(f"{entity} -  Set away mode")
     elif config["off_state"] == "perm_hold":
-        retval1 = mqapi.call_service(
+        retval1 = adapi.call_service(
             "climate/set_temperature",
             entity_id=entity,
             temperature=config["off_temp"],
         )
 
-        retval2 = mqapi.call_service(
+        retval2 = adapi.call_service(
             "climate/set_preset_mode",
             entity_id=entity,
             preset_mode="Permanent Hold",
         )
-        mqapi.log(
+        adapi.log(
             f"{entity} - Set Perm Hold to {config['off_temp']}. retval1: {retval1} -- retval2: {retval2}"
         )
     else:
-        mqapi.error(f"Programming error. Unexpected off_rule: {config}")
+        adapi.error(f"Programming error. Unexpected off_rule: {config}")
 
 
-def occupancy_length(entity_id, hassapi, days=10):
+def occupancy_length(entity_id: str, hassapi: Hass, days: int = 10):
     """
     returns: state (on/off), duration_off (hours float / None), last_on_date (datetime, None)
     {
@@ -170,9 +170,9 @@ def occupancy_length(entity_id, hassapi, days=10):
         "last_updated": "2020-10-28T13:10:47.384057+00:00"
     }
     """
-    data = hassapi.get_history(entity_id=entity_id, days=days)
+    data: List = hassapi.get_history(entity_id=entity_id, days=days) # type: ignore
 
-    if len(data) == 0:
+    if not data or len(data) == 0:
         hassapi.warn(f"get_history returned no data for entity: {entity_id}. Exiting")
         return "error", None, None
     edata = data[0]
@@ -185,10 +185,10 @@ def occupancy_length(entity_id, hassapi, days=10):
         return "on", None, None
 
     last_on_date = None
+    now: dt.datetime = hassapi.get_now() # type: ignore
     for rec in edata:
         if rec.get("state") == "on":
-            last_on_date = dt.datetime.fromisoformat(rec["last_updated"])
-            now = hassapi.get_now()
+            last_on_date = dt.datetime.fromisoformat(rec["last_updated"])         
             duration_off_hours = round(
                 (now - last_on_date).total_seconds() / (60 * 60), 2
             )
@@ -197,7 +197,7 @@ def occupancy_length(entity_id, hassapi, days=10):
     # Can not find a last on time. Give the total time shown.
     min_time_off = round(
         (
-            hassapi.get_now() - dt.datetime.fromisoformat(edata[-1]["last_updated"])
+            now - dt.datetime.fromisoformat(edata[-1]["last_updated"])
         ).seconds
         / (60 * 60),
         2,
