@@ -2,6 +2,7 @@ from typing import Tuple, Optional
 import math
 import datetime as dt
 from adplus import MqPlus
+from appdaemon.adbase import ADBase
 
 """
 # TODO
@@ -117,31 +118,30 @@ def turn_off_entity(
 ) -> None:
 
     attributes = stateobj["attributes"]
-    off_rule = config
 
     if "temperature" not in attributes:
         mqapi.log(f"{entity} - Offline. Can not turn off.")
         return
 
-    if not off_rule:
+    if not config:
         mqapi.error(f"No off_rule for entity: {entity}. Can not turn off.")
         return
 
-    if off_rule["off_state"] == "off":
+    if config["off_state"] == "off":
         retval = mqapi.call_service("climate/turn_off", entity_id=entity)
         mqapi.lb_log(f"{entity} - Turn off")
-    elif off_rule["off_state"] == "away":
+    elif config["off_state"] == "away":
         retval = mqapi.call_service(
             "climate/set_preset_mode",
             entity_id=entity,
             preset_mode="Away",
         )
         mqapi.lb_log(f"{entity} -  Set away mode")
-    elif off_rule["off_state"] == "perm_hold":
+    elif config["off_state"] == "perm_hold":
         retval1 = mqapi.call_service(
             "climate/set_temperature",
             entity_id=entity,
-            temperature=off_rule["off_temp"],
+            temperature=config["off_temp"],
         )
 
         retval2 = mqapi.call_service(
@@ -150,10 +150,10 @@ def turn_off_entity(
             preset_mode="Permanent Hold",
         )
         mqapi.log(
-            f"{entity} - Set Perm Hold to {off_rule['off_temp']}. retval1: {retval1} -- retval2: {retval2}"
+            f"{entity} - Set Perm Hold to {config['off_temp']}. retval1: {retval1} -- retval2: {retval2}"
         )
     else:
-        mqapi.error(f"Programming error. Unexpected off_rule: {off_rule}")
+        mqapi.error(f"Programming error. Unexpected off_rule: {config}")
 
 
 def occupancy_length(entity_id, hassapi, days=10):
