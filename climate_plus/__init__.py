@@ -1,5 +1,4 @@
 from typing import Tuple, Optional
-import logging
 import math
 import datetime as dt
 from adplus import MqPlus
@@ -15,7 +14,7 @@ def offstate(
     entity: str,
     stateobj: dict,
     config: dict,
-    logger: logging.Logger,
+    mqapi: MqPlus,
     test_mode: bool = False,
     mock_data: Optional[dict] = None,
 ) -> Tuple[str, str, float]:
@@ -31,7 +30,7 @@ def offstate(
     if test_mode and mock_data:
         if mock_data.get("entity_id") == entity:
             mock_attributes = mock_data["mock_attributes"]
-            logger.info(
+            mqapi.info(
                 f"get_entity_state: using MOCKED attributes for entity {entity}: {mock_attributes}"
             )
             attributes = attributes.copy()
@@ -103,7 +102,6 @@ def turn_off_entity(
     entity: str,
     stateobj: dict,
     config: dict,
-    logger,  ## ROSS - create my own logger class with proper params
     test_mode: bool = False,
 ) -> None:
 
@@ -111,23 +109,23 @@ def turn_off_entity(
     off_rule = config
 
     if "temperature" not in attributes:
-        logger.log(f"{entity} - Offline. Can not turn off.")
+        mqapi.log(f"{entity} - Offline. Can not turn off.")
         return
 
     if not off_rule:
-        logger.error(f"No off_rule for entity: {entity}. Can not turn off.")
+        mqapi.error(f"No off_rule for entity: {entity}. Can not turn off.")
         return
 
     if off_rule["off_state"] == "off":
         retval = mqapi.call_service("climate/turn_off", entity_id=entity)
-        logger.lb_log(f"{entity} - Turn off")
+        mqapi.lb_log(f"{entity} - Turn off")
     elif off_rule["off_state"] == "away":
         retval = mqapi.call_service(
             "climate/set_preset_mode",
             entity_id=entity,
             preset_mode="Away",
         )
-        logger.lb_log(f"{entity} -  Set away mode")
+        mqapi.lb_log(f"{entity} -  Set away mode")
     elif off_rule["off_state"] == "perm_hold":
         retval1 = mqapi.call_service(
             "climate/set_temperature",
@@ -140,14 +138,14 @@ def turn_off_entity(
             entity_id=entity,
             preset_mode="Permanent Hold",
         )
-        logger.log(
+        mqapi.log(
             f"{entity} - Set Perm Hold to {off_rule['off_temp']}. retval1: {retval1} -- retval2: {retval2}"
         )
     else:
-        logger.error(f"Programming error. Unexpected off_rule: {off_rule}")
+        mqapi.error(f"Programming error. Unexpected off_rule: {off_rule}")
 
 
-def occupancy_length(entity_id, hassapi, logger, days=10):
+def occupancy_length(entity_id, hassapi, days=10):
     """
     returns: state (on/off), duration_off (hours float / None), last_on_date (datetime, None)
     {
@@ -164,7 +162,7 @@ def occupancy_length(entity_id, hassapi, logger, days=10):
     data = hassapi.get_history(entity_id=entity_id, days=days)
 
     if len(data) == 0:
-        logger.warn(f"get_history returned no data for entity: {entity_id}. Exiting")
+        hassapi.warn(f"get_history returned no data for entity: {entity_id}. Exiting")
         return "error", None, None
     edata = data[0]
 

@@ -209,7 +209,7 @@ class AutoClimateApp(adplus.MqPlus):
             entity,
             state_obj,
             self.argsn["off_rules"][entity],
-            logging.getLogger(),
+            self,
             self.test_mode,
             self.mock_data
         )
@@ -294,7 +294,6 @@ class AutoClimateApp(adplus.MqPlus):
             entity,
             stateobj,
             self.argsn["off_rules"].get(entity),
-            logging.getLogger(),
             self.test_mode
         )
 
@@ -314,7 +313,6 @@ class AutoClimateApp(adplus.MqPlus):
         return occupancy_length(
             entity_id,
             self.get_plugin_api("HASS"),
-            logging.getLogger(),
             days
         )
 
