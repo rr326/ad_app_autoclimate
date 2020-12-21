@@ -2,11 +2,15 @@ import datetime as dt
 import json  # noqa
 import math
 from typing import Tuple
-from climate_plus import offstate
+import logging
+
 
 import adplus
+import climate_plus
 
 adplus.importlib.reload(adplus)
+adplus.importlib.reload(climate_plus)
+from climate_plus import offstate, occupancy_length, turn_off_entity
 
 SCHEMA = {
     "name": {"required": True, "type": "string"},
@@ -205,6 +209,7 @@ class AutoClimateApp(adplus.MqPlus):
             entity,
             state_obj,
             self.argsn["off_rules"][entity],
+            logging.getLogger(),
             self.test_mode,
             self.mock_data
         )
@@ -282,45 +287,16 @@ class AutoClimateApp(adplus.MqPlus):
             return "programming_error"
 
     def turn_off_entity(self, entity):
-        state = self.get_state(entity, attribute="all")
-        attributes = state["attributes"]
-        off_rule = self.argsn["off_rules"].get(entity)
+        stateobj: dict = self.get_state(entity, attribute="all") # type: ignore
 
-        if "temperature" not in attributes:
-            self.log(f"{entity} - Offline. Can not turn off.")
-            return
-
-        if not off_rule:
-            self.error(f"No off_rule for entity: {entity}. Can not turn off.")
-            return
-
-        if off_rule["off_state"] == "off":
-            retval = self.call_service("climate/turn_off", entity_id=entity)
-            self.lb_log(f"{entity} - Turn off")
-        elif off_rule["off_state"] == "away":
-            retval = self.call_service(
-                "climate/set_preset_mode",
-                entity_id=entity,
-                preset_mode="Away",
-            )
-            self.lb_log(f"{entity} -  Set away mode")
-        elif off_rule["off_state"] == "perm_hold":
-            retval1 = self.call_service(
-                "climate/set_temperature",
-                entity_id=entity,
-                temperature=off_rule["off_temp"],
-            )
-
-            retval2 = self.call_service(
-                "climate/set_preset_mode",
-                entity_id=entity,
-                preset_mode="Permanent Hold",
-            )
-            self.log(
-                f"{entity} - Set Perm Hold to {off_rule['off_temp']}. retval1: {retval1} -- retval2: {retval2}"
-            )
-        else:
-            self.error(f"Programming error. Unexpected off_rule: {off_rule}")
+        return turn_off_entity(
+            self,
+            entity,
+            stateobj,
+            self.argsn["off_rules"].get(entity),
+            logging.getLogger(),
+            self.test_mode
+        )
 
     def turn_off_all(self, event_name, data, kwargs):
         self.log(
@@ -335,53 +311,13 @@ class AutoClimateApp(adplus.MqPlus):
             self.turn_off_entity(entity)
 
     def occupancy_length(self, entity_id, days=10):
-        """
-        returns: state (on/off), duration_off (hours float / None), last_on_date (datetime, None)
-        {
-            "entity_id": "binary_sensor.seattle_occupancy",
-            "state": "off",
-            "attributes": {
-                "friendly_name": "Seattle Occupancy",
-                "device_class": "occupancy"
-            },
-            "last_changed": "2020-10-28T13:10:47.384057+00:00",
-            "last_updated": "2020-10-28T13:10:47.384057+00:00"
-        }
-        """
-        hass = self.get_plugin_api("HASS")
-        data = hass.get_history(entity_id=entity_id, days=days)
-
-        if len(data) == 0:
-            self.warn(f"get_history returned no data for entity: {entity_id}. Exiting")
-            return "error", None, None
-        edata = data[0]
-
-        # the get_history() fn doesn't say it guarantees sort (though it appears to be)
-        edata = list(reversed(sorted(edata, key=lambda rec: rec["last_updated"])))
-
-        current_state = edata[0]["state"]
-        if current_state == "on":
-            return "on", None, None
-
-        last_on_date = None
-        for rec in edata:
-            if rec.get("state") == "on":
-                last_on_date = dt.datetime.fromisoformat(rec["last_updated"])
-                now = self.get_now()
-                duration_off_hours = round(
-                    (now - last_on_date).total_seconds() / (60 * 60), 2
-                )
-                return "off", duration_off_hours, last_on_date
-
-        # Can not find a last on time. Give the total time shown.
-        min_time_off = round(
-            (
-                self.get_now() - dt.datetime.fromisoformat(edata[-1]["last_updated"])
-            ).seconds
-            / (60 * 60),
-            2,
+        return occupancy_length(
+            entity_id,
+            self.get_plugin_api("HASS"),
+            logging.getLogger(),
+            days
         )
-        return "off", min_time_off, None
+
 
     def get_unoccupied_time_for(self, entity):
         try:
