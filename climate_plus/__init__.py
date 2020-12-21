@@ -5,8 +5,7 @@ from adplus import MqPlus
 
 """
 # TODO
-
-* Loggers - NOT RIGHT. Figure out better. Monkeypatching isn't working. 
+* Add validation????
 """
 
 
@@ -22,11 +21,15 @@ def offstate(
     Returns: on/off/offline, reason, current_temp
 
     if test_mode it will merge self.mocked_attributes to the state
+
+    This tests to see if a climate entity's state is what it should be.
+    The logic is pretty complex due to challenges with offline/online, 
+    priorities, differences in behavior from different thermostats, etc. 
     """
 
-    state = stateobj
-    attributes = state["attributes"] if state else {}
+    attributes = stateobj["attributes"] if stateobj else {}
 
+    # Mocks
     if test_mode and mock_data:
         if mock_data.get("entity_id") == entity:
             mock_attributes = mock_data["mock_attributes"]
@@ -46,24 +49,30 @@ def offstate(
         return "offline", "offline", current_temp
 
     #
-    # Heat is on?
+    # Not offline. Check if mode == off_state.
     #
     temp = attributes.get("temperature")
-    off_rule = config
 
+    # Turned off?
     if temp is None:
-        if off_rule["off_state"] == "off":
+        # Thermostat is turned off
+        if config["off_state"] == "off":
             return "off", "Thermostat is off", current_temp
         else:
             return "error_off", "Thermostat is off but should not be!", current_temp
-    elif off_rule["off_state"] == "off":
+
+    # Thermostat is on.
+    elif config["off_state"] == "off":
         return "on", "Thermostat is not off, but it should be", current_temp
-    elif off_rule["off_state"] == "away":
+
+    # Is away mode?
+    elif config["off_state"] == "away":
         if attributes.get("preset_mode").lower() != "away":
             return "on", "Not away mode, but should be", current_temp
-        else:  # Away mode
-            if (off_temp := off_rule.get("off_temp")) is None:
-                return "off", "Away mode.", current_temp
+        else:
+            # Proper away mode setting?
+            if (off_temp := config.get("off_temp")) is None:
+                return "off", "Away mode. No off_temp available.", current_temp
             else:
                 if temp == off_temp:
                     return (
@@ -78,22 +87,24 @@ def offstate(
                         current_temp,
                     )
 
-    elif off_rule["off_state"] == "perm_hold":
-        if attributes.get("preset_mode") != off_rule["perm_hold_string"]:
+    # Perm_hold?
+    elif config["off_state"] == "perm_hold":
+        if attributes.get("preset_mode") != config["perm_hold_string"]:
             return (
                 "on",
                 f"Not proper permanent hold. Actual: {attributes.get('preset_mode')} -- {attributes.get('temperature')}",
                 current_temp,
             )
-        elif temp > off_rule["off_temp"]:
+        elif temp > config["off_temp"]:
             return (
                 "on",
-                f"Perm hold at {temp}. Should be <= {off_rule['off_temp']}",
+                f"Perm hold at {temp}. Should be <= {config['off_temp']}",
                 current_temp,
             )
         else:
             return "off", f"Perm hold at {temp}", current_temp
 
+    # Unexpected value
     return "none", "error - should not be here", current_temp
 
 
