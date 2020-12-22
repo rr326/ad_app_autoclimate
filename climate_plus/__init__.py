@@ -1,6 +1,7 @@
-from typing import Tuple, Optional, List
-import math
 import datetime as dt
+import math
+from typing import List, Optional, Tuple
+
 from appdaemon.adapi import ADAPI
 from appdaemon.plugins.hass.hassapi import Hass
 

@@ -1,31 +1,23 @@
 import datetime as dt
 import json  # noqa
 import math
-from typing import Tuple, Optional
-import logging
-from appdaemon.plugins.hass.hassapi import Hass
-from .climate_plus_app import ClimatePlus
-
+from typing import Optional, Tuple
 
 import adplus
 import climate_plus
+from adplus import Hass
+from climate_plus_app import ClimatePlus
 
 adplus.importlib.reload(adplus)
 adplus.importlib.reload(climate_plus)
-from climate_plus import (
-    offstate,
-    occupancy_length,
-    turn_off_entity,
-    climate_name,
-    get_unoccupied_time_for,
-)
+from climate_plus import climate_name, get_unoccupied_time_for, offstate
 
 SCHEMA = {
     "name": {"required": True, "type": "string"},
     "poll_frequency": {"required": True, "type": "number"},
     "test_mode": {"required": False, "type": "boolean", "default": False},
     "create_temp_sensors": {"required": True, "type": "boolean"},
-    "off_rules" : ClimatePlus.OFF_RULES_SCHEMA,
+    "off_rules": ClimatePlus.OFF_RULES_SCHEMA,
     "auto_off": {
         "required": False,
         "type": "dict",

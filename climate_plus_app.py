@@ -13,20 +13,14 @@ It can be used by an app like AutoClimateApp.
 5. publish_unoccupied_for()
 """
 
-import datetime as dt
 import json  # noqa
-import math
-from typing import Tuple
-import logging
-from appdaemon.plugins.hass.hassapi import Hass
-
 
 import adplus
 import climate_plus
 
 adplus.importlib.reload(adplus)
 adplus.importlib.reload(climate_plus)
-from climate_plus import offstate, occupancy_length, turn_off_entity, climate_name
+from climate_plus import turn_off_entity
 
 
 class ClimatePlus(adplus.MqPlus):
