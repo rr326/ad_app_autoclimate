@@ -127,9 +127,12 @@ def turn_off_entity(
         adapi.error(f"No off_rule for entity: {entity}. Can not turn off.")
         return
 
+    # Set to "off"
     if config["off_state"] == "off":
         retval = adapi.call_service("climate/turn_off", entity_id=entity)
         adapi.lb_log(f"{entity} - Turn off")
+
+    # Set to "away"
     elif config["off_state"] == "away":
         retval = adapi.call_service(
             "climate/set_preset_mode",
@@ -137,6 +140,8 @@ def turn_off_entity(
             preset_mode="Away",
         )
         adapi.lb_log(f"{entity} -  Set away mode")
+
+    # Set to "perm_hold"
     elif config["off_state"] == "perm_hold":
         retval1 = adapi.call_service(
             "climate/set_temperature",
@@ -152,6 +157,8 @@ def turn_off_entity(
         adapi.log(
             f"{entity} - Set Perm Hold to {config['off_temp']}. retval1: {retval1} -- retval2: {retval2}"
         )
+
+    # Invalid config
     else:
         adapi.error(f"Programming error. Unexpected off_rule: {config}")
 
@@ -170,7 +177,7 @@ def occupancy_length(entity_id: str, hassapi: Hass, days: int = 10):
         "last_updated": "2020-10-28T13:10:47.384057+00:00"
     }
     """
-    data: List = hassapi.get_history(entity_id=entity_id, days=days) # type: ignore
+    data: List = hassapi.get_history(entity_id=entity_id, days=days)  # type: ignore
 
     if not data or len(data) == 0:
         hassapi.warn(f"get_history returned no data for entity: {entity_id}. Exiting")
@@ -185,10 +192,10 @@ def occupancy_length(entity_id: str, hassapi: Hass, days: int = 10):
         return "on", None, None
 
     last_on_date = None
-    now: dt.datetime = hassapi.get_now() # type: ignore
+    now: dt.datetime = hassapi.get_now()  # type: ignore
     for rec in edata:
         if rec.get("state") == "on":
-            last_on_date = dt.datetime.fromisoformat(rec["last_updated"])         
+            last_on_date = dt.datetime.fromisoformat(rec["last_updated"])
             duration_off_hours = round(
                 (now - last_on_date).total_seconds() / (60 * 60), 2
             )
@@ -196,10 +203,26 @@ def occupancy_length(entity_id: str, hassapi: Hass, days: int = 10):
 
     # Can not find a last on time. Give the total time shown.
     min_time_off = round(
-        (
-            now - dt.datetime.fromisoformat(edata[-1]["last_updated"])
-        ).seconds
+        (now - dt.datetime.fromisoformat(edata[-1]["last_updated"])).seconds
         / (60 * 60),
         2,
     )
     return "off", min_time_off, None
+
+
+def climate_name(entity):
+    # climate.my_thermostat ==> my_thermostat
+    return entity.split(".")[1]
+
+
+def get_unoccupied_time_for(
+    entity: str, config: dict, hassapi: Hass
+) -> Tuple[Optional[str], Optional[float], Optional[dt.datetime]]:
+    try:
+        oc_sensor = config["occupancy_sensor"]
+    except KeyError:
+        hassapi.error(f"Unable to get occupancy_sensor for {entity}")
+        return None, None, None
+
+    state, duration_off, last_on_date = occupancy_length(oc_sensor, hassapi)
+    return state, duration_off, last_on_date

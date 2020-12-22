@@ -3,6 +3,13 @@
 ## 0. Restructure
 Restructure Autoclimate from a single configurable app into a series of services AND a configureable app. This wasy you can use ClimatePlus in any HomeAssistant automation. Probably needs to use MQTT for signaling. 
 
+### Calling method
+How to enable these services?
+
+* MQTT - easiest for me - already done
+* services/xxx - ideal, but doesn't work!
+* state? 
+* event? 
 ### Services
 1. turn_off(entity, off_config)
 2. turn_off_all()

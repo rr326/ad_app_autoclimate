@@ -1,8 +1,10 @@
 import datetime as dt
 import json  # noqa
 import math
-from typing import Tuple
+from typing import Tuple, Optional
 import logging
+from appdaemon.plugins.hass.hassapi import Hass
+from .climate_plus_app import ClimatePlus
 
 
 import adplus
@@ -10,29 +12,20 @@ import climate_plus
 
 adplus.importlib.reload(adplus)
 adplus.importlib.reload(climate_plus)
-from climate_plus import offstate, occupancy_length, turn_off_entity
+from climate_plus import (
+    offstate,
+    occupancy_length,
+    turn_off_entity,
+    climate_name,
+    get_unoccupied_time_for,
+)
 
 SCHEMA = {
     "name": {"required": True, "type": "string"},
     "poll_frequency": {"required": True, "type": "number"},
     "test_mode": {"required": False, "type": "boolean", "default": False},
     "create_temp_sensors": {"required": True, "type": "boolean"},
-    "off_rules": {
-        "required": True,
-        "type": "dict",
-        "valuesrules": {
-            "type": "dict",
-            "schema": {
-                "off_state": {
-                    "type": "string",
-                    "required": True,
-                    "allowed": ["away", "off", "perm_hold"],
-                },
-                "off_temp": {"type": "number", "required": False},
-                "perm_hold_string": {"type": "string", "required": False},
-            },
-        },
-    },
+    "off_rules" : ClimatePlus.OFF_RULES_SCHEMA,
     "auto_off": {
         "required": False,
         "type": "dict",
@@ -141,7 +134,7 @@ class AutoClimateApp(adplus.MqPlus):
                     state=math.nan,
                     attributes={
                         "unit_of_measurement": "°F",
-                        "freindly_name": f"Temperatue for {self.climate_name(climate)}",
+                        "freindly_name": f"Temperatue for {climate_name(climate)}",
                         "device_class": "temperature",
                     },
                 )
@@ -162,12 +155,8 @@ class AutoClimateApp(adplus.MqPlus):
                 self.get_and_publish_state, entity=climate, attribute="all"
             )
 
-    @staticmethod
-    def climate_name(entity):
-        return entity.split(".")[1]
-
     def sensor_name(self, entity):
-        return f"sensor.{self.appname}_{self.climate_name(entity)}_temperature"
+        return f"sensor.{self.appname}_{climate_name(entity)}_temperature"
 
     def publish_state(
         self,
@@ -178,7 +167,7 @@ class AutoClimateApp(adplus.MqPlus):
         """
 
         data = {
-            f"{self.climate_name(entity)}_{key}": value
+            f"{climate_name(entity)}_{key}": value
             for (entity, rec) in self.state.items()
             for (key, value) in rec.items()
         }
@@ -204,16 +193,15 @@ class AutoClimateApp(adplus.MqPlus):
         self.publish_state()
 
     def get_entity_state(self, entity: str) -> Tuple[str, str, float]:
-        state_obj: dict = self.get_state(entity, attribute="all") # type: ignore
+        state_obj: dict = self.get_state(entity, attribute="all")  # type: ignore
         return offstate(
             entity,
             state_obj,
             self.argsn["off_rules"][entity],
             self,
             self.test_mode,
-            self.mock_data
+            self.mock_data,
         )
-
 
     def get_all_entities_state(self, *args):
         """
@@ -287,45 +275,39 @@ class AutoClimateApp(adplus.MqPlus):
             return "programming_error"
 
     def turn_off_entity(self, entity):
-        stateobj: dict = self.get_state(entity, attribute="all") # type: ignore
-
-        return turn_off_entity(
-            self,
-            entity,
-            stateobj,
-            self.argsn["off_rules"].get(entity),
-            self.test_mode
+        config = self.argsn["off_rules"].get(entity)
+        if not config:
+            self.log(f'No config for {entity} in offrules: {self.argsn["off_rules"]}')
+            return
+        self.call_service(
+            "climate_plus/turn_off_entity",
+            entity=entity,
+            config=config,
+            test_mode=self.test_mode,
         )
 
     def turn_off_all(self, event_name, data, kwargs):
         self.log(
             f"Triggered - {self.TRIGGER_HEAT_OFF}: {event_name} -- {data} -- {kwargs}"
         )
-        self.lb_log("Turn heat off triggered")
-        if self.test_mode:
-            self.log("Test mode - not actually turning off heat. ")
-            return
-
-        for entity in self.climates:
-            self.turn_off_entity(entity)
-
-    def occupancy_length(self, entity_id, days=10):
-        return occupancy_length(
-            entity_id,
-            self.get_plugin_api("HASS"),
-            days
+        self.call_service(
+            "climate_plus/turn_off_all",
+            entities=self.entities,
+            config=self.argsn["off_rules"],
+            test_mode=self.test_mode,
         )
 
-
-    def get_unoccupied_time_for(self, entity):
+    def get_unoccupied_time_for(
+        self, entity
+    ) -> Tuple[Optional[str], Optional[float], Optional[dt.datetime]]:
         try:
-            oc_sensor = self.argsn["auto_off"][entity]["occupancy_sensor"]
+            config = self.argsn["auto_off"][entity]
         except KeyError:
-            self.error(f"Unable to get occupancy_sensor for {entity}")
+            self.error(f"Unable to get config for {entity}")
             return None, None, None
 
-        state, duration_off, last_on_date = self.occupancy_length(oc_sensor)
-        return state, duration_off, last_on_date
+        hassapi: Hass = self.get_plugin_api("HASS")  # type: ignore
+        return get_unoccupied_time_for(entity, config, hassapi)
 
     def autooff_scheduled_cb(self, kwargs):
         """
