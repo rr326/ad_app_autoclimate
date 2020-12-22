@@ -44,7 +44,7 @@ SCHEMA = {
 }
 
 
-class AutoClimateApp(adplus.MqPlus):
+class AutoClimateApp(adplus.Hass):
     """
     # AutoClimateApp
     This provides serveral services for thermostat management.
@@ -74,7 +74,8 @@ class AutoClimateApp(adplus.MqPlus):
         self.init_create_states()
         self.init_states()
 
-        self.mq_listen_event(self.turn_off_all, self.TRIGGER_HEAT_OFF)
+        # ROSS REMOVE ALL MQ
+        # self.mq_listen_event(self.turn_off_all, self.TRIGGER_HEAT_OFF)
 
         #
         # get_and_publish_state:
@@ -271,8 +272,8 @@ class AutoClimateApp(adplus.MqPlus):
         if not config:
             self.log(f'No config for {entity} in offrules: {self.argsn["off_rules"]}')
             return
-        self.call_service(
-            "climate_plus/turn_off_entity",
+        self.fire_event(
+            ClimatePlus.EVENT_TURN_OFF_ENTITY,
             entity=entity,
             config=config,
             test_mode=self.test_mode,
@@ -282,9 +283,9 @@ class AutoClimateApp(adplus.MqPlus):
         self.log(
             f"Triggered - {self.TRIGGER_HEAT_OFF}: {event_name} -- {data} -- {kwargs}"
         )
-        self.call_service(
-            "climate_plus/turn_off_all",
-            entities=self.entities,
+        self.fire_event(
+            ClimatePlus.EVENT_TURN_OFF_ALL,
+            ntities=self.entities,
             config=self.argsn["off_rules"],
             test_mode=self.test_mode,
         )

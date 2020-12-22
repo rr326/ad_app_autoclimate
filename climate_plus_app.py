@@ -23,7 +23,7 @@ adplus.importlib.reload(climate_plus)
 from climate_plus import turn_off_entity
 
 
-class ClimatePlus(adplus.MqPlus):
+class ClimatePlus(adplus.Hass):
     OFF_SCHEMA = {
         "type": "dict",
         "schema": {
@@ -37,20 +37,22 @@ class ClimatePlus(adplus.MqPlus):
         },
     }
 
+    EVENT_TURN_OFF_ENTITY = 'climate_plus.turn_off_entity'
+    EVENT_TURN_OFF_ALL= 'climate_plus.turn_off_all'
+
+
     OFF_RULES_SCHEMA = {"required": True, "type": "dict", "valuesrules": OFF_SCHEMA}
 
     def initialize(self):
         self.log("Initialize")
         self.namespace = self.args.get("namespace", "autoclimate")
+        self.test_mode = self.args.get("test_mode", False)
 
-        self.register_service("climate/turn_off_entity", self.cb_turn_off_entity)
-        self.register_service("climate/turn_off_all", self.cb_turn_off_all)
+        self.listen_event(self.cb_turn_off_entity, self.EVENT_TURN_OFF_ENTITY)
+        self.listen_event(self.cb_turn_off_all, self.EVENT_TURN_OFF_ALL)
 
-        # self.test_services()
-        # self.register_service('climate_plus/turn_off_entity', cb_turn_off_entity)
-        # self.register_service('climate_plus/turn_off_all', cb_turn_off_all)
 
-    def cb_turn_off_entity(self, namespace, domain, service, kwargs):
+    def cb_turn_off_entity(self, event_name, data, kwargs):
         """
         kwargs:
             entity: climate_string
@@ -65,7 +67,7 @@ class ClimatePlus(adplus.MqPlus):
 
         return turn_off_entity(self, entity, stateobj, config, test_mode)
 
-    def cb_turn_off_all(self, namespace, domain, service, kwargs):
+    def cb_turn_off_all(self, event_name, data, kwargs):
         """
         kwargs:
             entities: [climate_string]
@@ -83,9 +85,8 @@ class ClimatePlus(adplus.MqPlus):
 
         for entity in entities:
             self.cb_turn_off_entity(
-                namespace,
-                domain,
-                service,
+                event_name,
+                data,
                 kwargs={
                     "entity": entity,
                     "config": config.get(entity, {}),
@@ -93,23 +94,4 @@ class ClimatePlus(adplus.MqPlus):
                 },
             )
 
-    #
-    # Weird - can't use namespace = "default"
-    #
-    def test_services(self):
-        self.register_service(
-            "climate_plus/test_call_service",
-            self.cb_test_call_service,
-            namespace=self.namespace,
-        )
-        self.call_service(
-            "climate_plus/test_call_service",
-            kwarg1="val1",
-            kwarg2="val2",
-            namespace=self.namespace,
-        )
-
-    def cb_test_call_service(self, namespace, domain, service, kwargs):
-        self.log(
-            f"test_call_service - {namespace} -- {domain} -- {service} -- {kwargs}"
-        )
+   
