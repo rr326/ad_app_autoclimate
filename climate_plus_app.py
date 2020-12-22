@@ -40,7 +40,6 @@ class ClimatePlus(adplus.Hass):
     EVENT_TURN_OFF_ENTITY = 'climate_plus.turn_off_entity'
     EVENT_TURN_OFF_ALL= 'climate_plus.turn_off_all'
 
-
     OFF_RULES_SCHEMA = {"required": True, "type": "dict", "valuesrules": OFF_SCHEMA}
 
     def initialize(self):

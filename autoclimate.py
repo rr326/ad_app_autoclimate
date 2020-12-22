@@ -76,6 +76,7 @@ class AutoClimateApp(adplus.Hass):
 
         # ROSS REMOVE ALL MQ
         # self.mq_listen_event(self.turn_off_all, self.TRIGGER_HEAT_OFF)
+        self.listen_event(self.test_event, event="climate_plus_test_event")
 
         #
         # get_and_publish_state:
@@ -92,6 +93,9 @@ class AutoClimateApp(adplus.Hass):
         # Mocks
         if self.test_mode:
             self.run_in(self.init_mocks, 0)
+
+    def test_event(self, event_name, data, kwargs):
+        self.log(f'## test_event triggered: {event_name} -- {data} -- {kwargs}')
 
     def extra_validation(self, args):
         # Validation that Cerberus doesn't do well
