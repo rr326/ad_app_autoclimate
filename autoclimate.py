@@ -4,20 +4,33 @@ import math
 from typing import Optional, Tuple
 
 import adplus
-import climate_plus
 from adplus import Hass
-from climate_plus_app import ClimatePlus
 
 adplus.importlib.reload(adplus)
-adplus.importlib.reload(climate_plus)
-from climate_plus import climate_name, get_unoccupied_time_for, offstate
+from unoccupied import get_unoccupied_time_for
+from utils import climate_name, offstate
 
 SCHEMA = {
     "name": {"required": True, "type": "string"},
     "poll_frequency": {"required": True, "type": "number"},
     "test_mode": {"required": False, "type": "boolean", "default": False},
     "create_temp_sensors": {"required": True, "type": "boolean"},
-    "off_rules": ClimatePlus.OFF_RULES_SCHEMA,
+    "off_rules": {
+        "required": True,
+        "type": "dict",
+        "valuesrules": {
+            "type": "dict",
+            "schema": {
+                "off_state": {
+                    "type": "string",
+                    "required": True,
+                    "allowed": ["away", "off", "perm_hold"],
+                },
+                "off_temp": {"type": "number", "required": False},
+                "perm_hold_string": {"type": "string", "required": False},
+            },
+        },
+    },
     "auto_off": {
         "required": False,
         "type": "dict",
@@ -52,6 +65,10 @@ class AutoClimateApp(adplus.Hass):
     See README.md for documentation.
     See autoclimate.yaml.sample for sample configuration.
     """
+
+    EVENT_TRIGGER = "climate_plus"
+    EVENT_TURN_OFF_ENTITY = "turn_off_entity"
+    EVENT_TURN_OFF_ALL = "turn_off_all"
 
     def initialize(self):
         self.log("Initialize")
@@ -92,8 +109,6 @@ class AutoClimateApp(adplus.Hass):
         # Mocks
         if self.test_mode:
             self.run_in(self.init_mocks, 0)
-
-
 
     def extra_validation(self, args):
         # Validation that Cerberus doesn't do well
@@ -275,7 +290,7 @@ class AutoClimateApp(adplus.Hass):
             self.log(f'No config for {entity} in offrules: {self.argsn["off_rules"]}')
             return
         self.fire_event(
-            ClimatePlus.EVENT_TURN_OFF_ENTITY,
+            self.EVENT_TURN_OFF_ENTITY,
             entity=entity,
             config=config,
             test_mode=self.test_mode,
@@ -286,7 +301,7 @@ class AutoClimateApp(adplus.Hass):
             f"Triggered - {self.TRIGGER_HEAT_OFF}: {event_name} -- {data} -- {kwargs}"
         )
         self.fire_event(
-            ClimatePlus.EVENT_TURN_OFF_ALL,
+            self.EVENT_TURN_OFF_ALL,
             ntities=self.entities,
             config=self.argsn["off_rules"],
             test_mode=self.test_mode,

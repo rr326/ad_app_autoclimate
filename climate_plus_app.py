@@ -38,8 +38,8 @@ class ClimatePlus(adplus.Hass):
     }
 
     EVENT_TRIGGER = "climate_plus"
-    EVENT_TURN_OFF_ENTITY = 'turn_off_entity'
-    EVENT_TURN_OFF_ALL= 'turn_off_all'
+    EVENT_TURN_OFF_ENTITY = "turn_off_entity"
+    EVENT_TURN_OFF_ALL = "turn_off_all"
 
     OFF_RULES_SCHEMA = {"required": True, "type": "dict", "valuesrules": OFF_SCHEMA}
 
@@ -50,10 +50,12 @@ class ClimatePlus(adplus.Hass):
 
         # self.listen_event(self.cb_turn_off_entity, event=self.EVENT_TRIGGER, sub_event = self.EVENT_TURN_OFF_ENTITY)
         # self.listen_event(self.cb_turn_off_all, event=self.EVENT_TRIGGER, sub_event = self.EVENT_TURN_OFF_ALL)
-        self.listen_event(self.test_event, event=self.EVENT_TRIGGER,sub_event = self.EVENT_TURN_OFF_ALL)
+        self.listen_event(
+            self.test_event, event=self.EVENT_TRIGGER, sub_event=self.EVENT_TURN_OFF_ALL
+        )
 
     def test_event(self, event_name, data, kwargs):
-        self.log(f'## test_event triggered: {event_name} -- {data} -- {kwargs}')
+        self.log(f"## test_event triggered: {event_name} -- {data} -- {kwargs}")
 
     def cb_turn_off_entity(self, event_name, data, kwargs):
         """
@@ -96,5 +98,3 @@ class ClimatePlus(adplus.Hass):
                     "test_mode": test_mode,
                 },
             )
-
-   
