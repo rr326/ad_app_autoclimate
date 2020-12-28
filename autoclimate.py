@@ -10,6 +10,7 @@ adplus.importlib.reload(adplus)
 from autoclimate.unoccupied import get_unoccupied_time_for
 from autoclimate.utils import climate_name, offstate
 import autoclimate.turn_off as turn_off
+from autoclimate.mocks import init_mocks
 
 adplus.importlib.reload(turn_off)
 
@@ -93,7 +94,6 @@ class AutoClimateApp(adplus.Hass):
         self.appname = self.argsn["name"]
         self.poll_frequency = self.argsn["poll_frequency"]
         self.create_temp_sensors = self.argsn["create_temp_sensors"]
-        self.mock_data = None
         self.state = {}
         self._current_temps = {}  # {climate: current_temp}
         self.APP_STATE = f"app.{self.appname}_state"
@@ -125,9 +125,10 @@ class AutoClimateApp(adplus.Hass):
         # This will also get_and_publish_state
         self.run_every(self.autooff_scheduled_cb, "now", 60 * 60 * self.poll_frequency)
 
-        # Mocks
+        # Init Mocks
         if self.test_mode:
-            self.run_in(self.init_mocks, 0)
+            self.run_in(init_mocks, 0, mock_config = self.argsn.get("mocks"), mock_callback=self.autooff_scheduled_cb)
+
 
     def extra_validation(self, args):
         # Validation that Cerberus doesn't do well
@@ -220,11 +221,12 @@ class AutoClimateApp(adplus.Hass):
         # )
 
     def get_and_publish_state(self, *args, **kwargs):
-        self.get_all_entities_state()  # Update state copy
+        mock_data = kwargs.get("mock_data")
+        self.get_all_entities_state(mock_data=mock_data)  # Update state copy
 
         self.publish_state()
 
-    def get_entity_state(self, entity: str) -> Tuple[str, str, float]:
+    def get_entity_state(self, entity: str, mock_data: Optional[dict] = None) -> Tuple[str, str, float]:
         state_obj: dict = self.get_state(entity, attribute="all")  # type: ignore
         return offstate(
             entity,
@@ -232,10 +234,10 @@ class AutoClimateApp(adplus.Hass):
             self.argsn["off_rules"][entity],
             self,
             self.test_mode,
-            self.mock_data,
+            mock_data,
         )
 
-    def get_all_entities_state(self, *args):
+    def get_all_entities_state(self, *args, mock_data: Optional[dict]=None):
         """
         temp
             * value = valid setpoint
@@ -243,7 +245,7 @@ class AutoClimateApp(adplus.Hass):
             * None = system is off
         """
         for entity in self.climates:
-            summarized_state, state_reason, current_temp = self.get_entity_state(entity)
+            summarized_state, state_reason, current_temp = self.get_entity_state(entity, mock_data)
 
             #
             # Current_temp
@@ -353,17 +355,3 @@ class AutoClimateApp(adplus.Hass):
                 self.lb_log(f"Autooff - Turning off {entity}")
                 if not self.test_mode:
                     self.fire_event(turn_off.EVENT_TURN_OFF_ENTITY, entity=entity)
-
-    def init_mocks(self, kwargs):
-        if self.test_mode:
-            mock_delay = 0
-            for mock in self.argsn.get("mocks", []):
-                self.run_in(
-                    self.run_mock, mock_delay := mock_delay + 1, mock_config=mock
-                )
-
-    def run_mock(self, kwargs):
-        config = kwargs["mock_config"]
-        self.log(f"\n\n==========\nMOCK: {config}")
-        self.mock_data = config
-        self.run_in(self.autooff_scheduled_cb, 0)
