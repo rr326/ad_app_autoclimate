@@ -7,8 +7,12 @@ import adplus
 from adplus import Hass
 
 adplus.importlib.reload(adplus)
-from unoccupied import get_unoccupied_time_for
-from utils import climate_name, offstate
+from autoclimate.unoccupied import get_unoccupied_time_for
+from autoclimate.utils import climate_name, offstate
+import autoclimate.turn_off as turn_off
+
+adplus.importlib.reload(turn_off)
+
 
 SCHEMA = {
     "name": {"required": True, "type": "string"},
@@ -64,11 +68,21 @@ class AutoClimateApp(adplus.Hass):
 
     See README.md for documentation.
     See autoclimate.yaml.sample for sample configuration.
+
+    ## Events 
+    Events have TWO names:
+    event = "autoclimate" for ALL events
+    sub_event = app.{appname}_event - this is the event you actually care about
+
+    Why? To trigger an event in Lovelace, you need to trigger a script, where you 
+    have to hardcode the event name, but can send template data in the body. So
+    rather than have to write different scripts for each event, here you create 
+    *one* script to trigger the event and put the event you care about in a 
+    sub_event kwarg. 
     """
 
-    EVENT_TRIGGER = "climate_plus"
-    EVENT_TURN_OFF_ENTITY = "turn_off_entity"
-    EVENT_TURN_OFF_ALL = "turn_off_all"
+
+    EVENT_TRIGGER = "autoclimate"
 
     def initialize(self):
         self.log("Initialize")
@@ -87,6 +101,11 @@ class AutoClimateApp(adplus.Hass):
 
         self.climates = list(self.argsn["off_rules"].keys())
         self.log(f"Climates controlled: {self.climates}")
+
+
+
+        # Initialize
+        turn_off.init_listeners(self, self.appname)
 
         self.init_create_states()
         self.init_states()
@@ -126,6 +145,9 @@ class AutoClimateApp(adplus.Hass):
                 self.error(
                     f"Probable misconfiguration (bad entity): could not get state for entity: {climate}"
                 )
+
+    def trigger_sub_events(self):
+        pass
 
     def init_create_states(self):
         # APP_STATE
@@ -284,29 +306,6 @@ class AutoClimateApp(adplus.Hass):
             self.log(f"Unexpected overall state found: {substates}")
             return "programming_error"
 
-    def turn_off_entity(self, entity):
-        config = self.argsn["off_rules"].get(entity)
-        if not config:
-            self.log(f'No config for {entity} in offrules: {self.argsn["off_rules"]}')
-            return
-        self.fire_event(
-            self.EVENT_TURN_OFF_ENTITY,
-            entity=entity,
-            config=config,
-            test_mode=self.test_mode,
-        )
-
-    def turn_off_all(self, event_name, data, kwargs):
-        self.log(
-            f"Triggered - {self.TRIGGER_HEAT_OFF}: {event_name} -- {data} -- {kwargs}"
-        )
-        self.fire_event(
-            self.EVENT_TURN_OFF_ALL,
-            ntities=self.entities,
-            config=self.argsn["off_rules"],
-            test_mode=self.test_mode,
-        )
-
     def get_unoccupied_time_for(
         self, entity
     ) -> Tuple[Optional[str], Optional[float], Optional[dt.datetime]]:
@@ -353,7 +352,7 @@ class AutoClimateApp(adplus.Hass):
             elif duration_off > config["unoccupied_for"] or self.test_mode:
                 self.lb_log(f"Autooff - Turning off {entity}")
                 if not self.test_mode:
-                    self.turn_off_entity(entity)
+                    self.fire_event(turn_off.EVENT_TURN_OFF_ENTITY, entity=entity)
 
     def init_mocks(self, kwargs):
         if self.test_mode:
