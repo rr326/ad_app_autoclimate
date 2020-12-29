@@ -8,9 +8,9 @@ from adplus import Hass
 
 adplus.importlib.reload(adplus)
 from autoclimate.unoccupied import get_unoccupied_time_for
-from autoclimate.utils import climate_name, offstate
 import autoclimate.turn_off as turn_off
 from autoclimate.mocks import Mocks
+from autoclimate.state import State
 
 adplus.importlib.reload(turn_off)
 
@@ -36,7 +36,7 @@ SCHEMA = {
             },
         },
     },
-    "auto_off": {
+    "auto_off": { # Sync with State.CONFIG_SCHEMA
         "required": False,
         "type": "dict",
         "valuesrules": {
@@ -92,10 +92,7 @@ class AutoClimateApp(adplus.Hass):
         self.test_mode = self.argsn.get("test_mode")
         self.appname = self.argsn["name"]
         self.poll_frequency = self.argsn["poll_frequency"]
-        self.create_temp_sensors = self.argsn["create_temp_sensors"]
-        self.state = {}
-        self._current_temps = {}  # {climate: current_temp}
-        self.APP_STATE = f"app.{self.appname}_state"
+
         self.TRIGGER_HEAT_OFF = f"app.{self.appname}_turn_off_all"
 
         self.climates = list(self.argsn["off_rules"].keys())
@@ -104,6 +101,14 @@ class AutoClimateApp(adplus.Hass):
         #
         # Initialize sub-classes
         #
+        self.state_module = State(
+            config=self.argsn["off_rules"],
+            appname = self.appname,
+            climates=self.climates,
+            create_temp_sensors=self.argsn["create_temp_sensors"],
+            test_mode=self.test_mode,
+        )
+
         self.mocks = Mocks(
             mock_config=self.argsn["mocks"],
             test_mode=self.test_mode,
@@ -152,168 +157,6 @@ class AutoClimateApp(adplus.Hass):
 
     def trigger_sub_events(self):
         pass
-
-    def init_create_states(self):
-        # APP_STATE
-        self.set_state(
-            self.APP_STATE,
-            state="None",
-            attributes={"friendly_name": f"{self.appname} State"},
-        )
-
-        # Temperature Sensors
-        if self.create_temp_sensors:
-            for climate in self.climates:
-                sensor_name = self.sensor_name(climate)
-                self.update_state(
-                    sensor_name,
-                    state=math.nan,
-                    attributes={
-                        "unit_of_measurement": "°F",
-                        "freindly_name": f"Temperatue for {climate_name(climate)}",
-                        "device_class": "temperature",
-                    },
-                )
-                self.log(f"Created sensor for {sensor_name}")
-
-    def init_states(self):
-        for climate in self.climates:
-            self.state[climate] = {
-                "offline": None,
-                "state": None,
-                "unoccupied": None,
-                "state_reason": None,
-            }
-
-    def init_climate_listeners(self, kwargs):
-        for climate in self.climates:
-            self.listen_state(
-                self.get_and_publish_state, entity=climate, attribute="all"
-            )
-
-    def sensor_name(self, entity):
-        return f"sensor.{self.appname}_{climate_name(entity)}_temperature"
-
-    def publish_state(
-        self,
-    ):
-        """
-        This publishes the current state, as flat attributes,
-        to APP_STATE (eg: app.autoclimate_state)
-        """
-
-        data = {
-            f"{climate_name(entity)}_{key}": value
-            for (entity, rec) in self.state.items()
-            for (key, value) in rec.items()
-        }
-        # app.autoclimate_state ==> autoclimate_state
-        data["summary_state"] = self.autoclimate_overall_state
-
-        self.update_state(
-            self.APP_STATE, state=self.autoclimate_overall_state, attributes=data
-        )
-
-        if self.create_temp_sensors:
-            for climate, current_temp in self._current_temps.items():
-                sensor_name = self.sensor_name(climate)
-                self.update_state(sensor_name, state=current_temp)
-
-        # self.log(
-        #     f"DEBUG LOGGING\nPublished State\n============\n{json.dumps(data, indent=2)}"
-        # )
-
-    def get_and_publish_state(self, *args, **kwargs):
-        mock_data = kwargs.get("mock_data")
-        self.get_all_entities_state(mock_data=mock_data)  # Update state copy
-
-        self.publish_state()
-
-    def get_entity_state(
-        self, entity: str, mock_data: Optional[dict] = None
-    ) -> Tuple[str, str, float]:
-        state_obj: dict = self.get_state(entity, attribute="all")  # type: ignore
-        return offstate(
-            entity,
-            state_obj,
-            self.argsn["off_rules"][entity],
-            self,
-            self.test_mode,
-            mock_data,
-        )
-
-    def get_all_entities_state(self, *args, mock_data: Optional[dict] = None):
-        """
-        temp
-            * value = valid setpoint
-            * not found: offline
-            * None = system is off
-        """
-        for entity in self.climates:
-            summarized_state, state_reason, current_temp = self.get_entity_state(
-                entity, mock_data
-            )
-
-            #
-            # Current_temp
-            #
-            self._current_temps[entity] = current_temp
-
-            #
-            # Offline
-            #
-            if summarized_state == "offline":
-                self.state[entity] = {
-                    "offline": True,
-                    "state": "offline",
-                    "unoccupied": "offline",
-                }
-                continue
-            else:
-                self.state[entity]["offline"] = False
-
-            #
-            # State
-            #
-            self.state[entity]["state"] = summarized_state
-            self.state[entity]["state_reason"] = state_reason
-
-            #
-            # Occupancy
-            #
-            if not self.state[entity]["offline"]:
-                try:
-                    state, duration_off, last_on_date = self.get_unoccupied_time_for(
-                        entity
-                    )
-                    if state == "on":
-                        self.state[entity]["unoccupied"] = False
-                    else:
-                        self.state[entity]["unoccupied"] = duration_off
-                except Exception as err:
-                    self.error(f"Error getting occupancy for {entity}. Err: {err}")
-
-    @property
-    def autoclimate_overall_state(self):
-        """
-        Overall state:
-            * on - any on
-            * offline - not on and any offline
-            * error - any "error_off" - meaning any are off but should not be
-            * off - all properly off, confirmed.
-        """
-        substates = {entity["state"] for entity in self.state.values()}
-        if "on" in substates:
-            return "on"
-        elif "offline" in substates:
-            return "offline"
-        elif "error_off" in substates:
-            return "error"
-        elif {"off"} == substates:
-            return "off"
-        else:
-            self.log(f"Unexpected overall state found: {substates}")
-            return "programming_error"
 
     def get_unoccupied_time_for(
         self, entity
