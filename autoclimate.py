@@ -11,8 +11,13 @@ from _autoclimate.unoccupied import get_unoccupied_time_for
 import _autoclimate.turn_off as turn_off
 from _autoclimate.mocks import Mocks
 from _autoclimate.state import State
+import _autoclimate
+import _autoclimate.state
+import _autoclimate.mocks
 
-adplus.importlib.reload(turn_off)
+adplus.importlib.reload(_autoclimate)
+adplus.importlib.reload(_autoclimate.state)
+adplus.importlib.reload(_autoclimate.mocks)
 
 
 SCHEMA = {
@@ -101,6 +106,7 @@ class AutoClimate(adplus.Hass):
         # Initialize sub-classes
         #
         self.state_module = State(
+            hass=self,
             config=self.entity_rules,
             appname=self.appname,
             climates=self.climates,
@@ -109,6 +115,7 @@ class AutoClimate(adplus.Hass):
         )
 
         self.mock_module = Mocks(
+            hass=self,
             mock_config=self.argsn["mocks"],
             test_mode=self.test_mode,
             mock_callbacks=[self.autooff_scheduled_cb],
@@ -176,8 +183,8 @@ class AutoClimate(adplus.Hass):
         Turn off any thermostats that have been on too long.
         """
         autooff_config = self.argsn.get("auto_off", {})
-        self.get_and_publish_state()
-        for entity, state in self.state.items():
+        self.state_module.get_and_publish_state()
+        for entity, state in self.state_module.state.items():
             self.debug(f'autooff: {entity} - {state["state"]}')
 
             config = autooff_config.get(entity)

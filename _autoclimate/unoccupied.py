@@ -1,7 +1,7 @@
 import datetime as dt
 from typing import List, Optional, Tuple
 
-from appdaemon.plugins.hass.hassapi import Hass
+from adplus import Hass
 
 
 def get_unoccupied_time_for(

@@ -2,18 +2,17 @@ from adplus import Hass
 from typing import List, Callable
 
 
-class Mocks(Hass):
+class Mocks():
     def __init__(
         self,
-        *args,
+        hass: Hass,
         mock_config: dict,
-        test_mode: bool = False,
         mock_callbacks: List[Callable],
+        test_mode: bool = False,
         init_delay: int = 1,
         mock_delay: int = 1,
     ):
-        super().__init__(*args)
-
+        self.hass = hass
         self.config = mock_config
         self.test_mode = test_mode
         self.callbacks = mock_callbacks
@@ -21,23 +20,25 @@ class Mocks(Hass):
         self.mock_delay = mock_delay
 
         if self.test_mode:
-            self.run_in(self.init_mocks, self.init_delay)
+            self.hass.run_in(self.init_mocks, self.init_delay)
 
     def init_mocks(self, kwargs):
-        self.log("Running Mocks")
+        self.hass.log("Running Mocks")
         mock_delay = 0
         for mock in self.config:
-            for callback in self.callbacks:
-                self.run_in(
-                    self.run_mock,
-                    mock_delay := mock_delay + self.mock_delay,
-                    mock_config=mock,
-                    mock_callback=callback,
-                    )
+            self.hass.run_in(
+                self.run_mock,
+                mock_delay := mock_delay + self.mock_delay,
+                mock_config=mock,
+                )
 
     def run_mock(self, kwargs):
+        """
+        Weird - I can't send the callback in the init_mocks above. Some sort of strange pickling / lock error. 
+        So instead I'll do the callback loop here.
+        """
         mock_config = kwargs["mock_config"]
-        callback = kwargs["mock_callback"]
-        self.log(f"\n\n==========\nMOCK: {mock_config}")
 
-        self.run_in(callback, 0, mock_data=mock_config)
+        self.hass.log(f"\n\n==========\nMOCK: {mock_config}")
+        for callback in self.callbacks:
+            self.hass.run_in(callback, 0, mock_data=mock_config)

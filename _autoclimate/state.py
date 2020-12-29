@@ -17,38 +17,41 @@ from _autoclimate.utils import climate_name
 from _autoclimate.unoccupied import get_unoccupied_time_for
 
 
-class State(Hass):
+class State:
     def __init__(
         self,
-        *args,
+        hass: Hass,
         config: dict,
         appname: str,
         climates: list,
         create_temp_sensors: bool,
         test_mode: bool,
     ):
-        super().__init__(*args)
+        self.hass = hass
         self.config = config
         self.appname = appname
         self.app_state_name = f"app.{self.appname}_state"
         self.test_mode = test_mode
         self.use_temp_sensors = create_temp_sensors
         self.climates = climates
+        self.hass.log(f'###state_init: {self.hass.get_app_pin()} -- thread_id: {self.hass.get_pin_thread()}')
+
 
         self.state: dict = {}
         self._current_temps: dict = {}  # {climate: current_temp}
 
-
         self.init_states()
 
-        self.run_in(self.create_hass_stateobj, 0)
+        self.hass.run_in(self.create_hass_stateobj, 0)
         if self.use_temp_sensors:
-            self.run_in(self.create_temp_sensors, 0)
-        self.run_in(self.init_climate_listeners, 0)
+            self.hass.run_in(self.create_temp_sensors, 0)
+        self.hass.run_in(self.init_climate_listeners, 0)
 
     def create_hass_stateobj(self, kwargs):
+        self.hass.log(f'###state_create_obj: {self.hass.get_app_pin()} -- thread_id: {self.hass.get_pin_thread()}')
+
         # APP_STATE
-        self.set_state(
+        self.hass.set_state(
             self.app_state_name,
             state="None",
             attributes={"friendly_name": f"{self.appname} State"},
@@ -58,7 +61,7 @@ class State(Hass):
         # Temperature Sensors
         for climate in self.climates:
             sensor_name = self.sensor_name(climate)
-            self.update_state(
+            self.hass.update_state(
                 sensor_name,
                 state=math.nan,
                 attributes={
@@ -67,7 +70,7 @@ class State(Hass):
                     "device_class": "temperature",
                 },
             )
-            self.log(f"Created sensor for {sensor_name}")
+            self.hass.log(f"Created sensor for {sensor_name}")
 
     def init_states(self):
         for climate in self.climates:
@@ -80,7 +83,7 @@ class State(Hass):
 
     def init_climate_listeners(self, kwargs):
         for climate in self.climates:
-            self.listen_state(
+            self.hass.listen_state(
                 self.get_and_publish_state, entity=climate, attribute="all"
             )
 
@@ -103,14 +106,14 @@ class State(Hass):
         # app.autoclimate_state ==> autoclimate_state
         data["summary_state"] = self.autoclimate_overall_state
 
-        self.update_state(
+        self.hass.update_state(
             self.app_state_name, state=self.autoclimate_overall_state, attributes=data
         )
 
         if self.use_temp_sensors:
             for climate, current_temp in self._current_temps.items():
                 sensor_name = self.sensor_name(climate)
-                self.update_state(sensor_name, state=current_temp)
+                self.hass.update_state(sensor_name, state=current_temp)
 
         # self.log(
         #     f"DEBUG LOGGING\nPublished State\n============\n{json.dumps(data, indent=2)}"
@@ -125,12 +128,12 @@ class State(Hass):
     def get_entity_state(
         self, entity: str, mock_data: Optional[dict] = None
     ) -> Tuple[str, str, float]:
-        state_obj: dict = self.get_state(entity, attribute="all")  # type: ignore
+        state_obj: dict = self.hass.get_state(entity, attribute="all")  # type: ignore
         return self.offstate(
             entity,
             state_obj,
             self.config[entity],
-            self,
+            self.hass,
             self.test_mode,
             mock_data,
         )
@@ -176,15 +179,13 @@ class State(Hass):
             #
             if not self.state[entity]["offline"]:
                 try:
-                    state, duration_off, last_on_date = get_unoccupied_time_for(
-                        entity
-                    )
+                    state, duration_off, last_on_date = get_unoccupied_time_for(entity, self.config[entity], self.hass)
                     if state == "on":
                         self.state[entity]["unoccupied"] = False
                     else:
                         self.state[entity]["unoccupied"] = duration_off
                 except Exception as err:
-                    self.error(f"Error getting occupancy for {entity}. Err: {err}")
+                    self.hass.error(f"Error getting occupancy for {entity}. Err: {err}")
 
     @property
     def autoclimate_overall_state(self):
@@ -205,7 +206,7 @@ class State(Hass):
         elif {"off"} == substates:
             return "off"
         else:
-            self.log(f"Unexpected overall state found: {substates}")
+            self.hass.log(f"Unexpected overall state found: {substates}")
             return "programming_error"
 
     @staticmethod
