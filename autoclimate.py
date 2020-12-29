@@ -7,10 +7,10 @@ import adplus
 from adplus import Hass
 
 adplus.importlib.reload(adplus)
-from autoclimate.unoccupied import get_unoccupied_time_for
-import autoclimate.turn_off as turn_off
-from autoclimate.mocks import Mocks
-from autoclimate.state import State
+from _autoclimate.unoccupied import get_unoccupied_time_for
+import _autoclimate.turn_off as turn_off
+from _autoclimate.mocks import Mocks
+from _autoclimate.state import State
 
 adplus.importlib.reload(turn_off)
 
@@ -20,30 +20,28 @@ SCHEMA = {
     "poll_frequency": {"required": True, "type": "number"},
     "test_mode": {"required": False, "type": "boolean", "default": False},
     "create_temp_sensors": {"required": True, "type": "boolean"},
-    "off_rules": {
+    "entity_rules": {
         "required": True,
         "type": "dict",
         "valuesrules": {
             "type": "dict",
+            "required": True,
             "schema": {
                 "off_state": {
-                    "type": "string",
+                    "type": "dict",
                     "required": True,
-                    "allowed": ["away", "off", "perm_hold"],
+                    "schema": {
+                        "state": {
+                            "type": "string",
+                            "required": True,
+                            "allowed": ["away", "off", "perm_hold"],
+                        },
+                        "temp": {"type": "number", "required": False},
+                        "perm_hold_string": {"type": "string", "required": False},
+                    },
                 },
-                "off_temp": {"type": "number", "required": False},
-                "perm_hold_string": {"type": "string", "required": False},
-            },
-        },
-    },
-    "auto_off": { # Sync with State.CONFIG_SCHEMA
-        "required": False,
-        "type": "dict",
-        "valuesrules": {
-            "type": "dict",
-            "schema": {
                 "occupancy_sensor": {"type": "string", "required": True},
-                "unoccupied_for": {"type": "number", "required": True},
+                "auto_off_hours": {"type": "number", "required": True},
             },
         },
     },
@@ -62,7 +60,7 @@ SCHEMA = {
 }
 
 
-class AutoClimateApp(adplus.Hass):
+class AutoClimate(adplus.Hass):
     """
     # AutoClimateApp
     This provides serveral services for thermostat management.
@@ -88,6 +86,7 @@ class AutoClimateApp(adplus.Hass):
         self.log("Initialize")
 
         self.argsn = adplus.normalized_args(self, SCHEMA, self.args, debug=False)
+        self.entity_rules = self.argsn["entity_rules"]
         self.extra_validation(self.argsn)
         self.test_mode = self.argsn.get("test_mode")
         self.appname = self.argsn["name"]
@@ -95,21 +94,21 @@ class AutoClimateApp(adplus.Hass):
 
         self.TRIGGER_HEAT_OFF = f"app.{self.appname}_turn_off_all"
 
-        self.climates = list(self.argsn["off_rules"].keys())
+        self.climates = list(self.entity_rules.keys())
         self.log(f"Climates controlled: {self.climates}")
 
         #
         # Initialize sub-classes
         #
         self.state_module = State(
-            config=self.argsn["off_rules"],
-            appname = self.appname,
+            config=self.entity_rules,
+            appname=self.appname,
             climates=self.climates,
             create_temp_sensors=self.argsn["create_temp_sensors"],
             test_mode=self.test_mode,
         )
 
-        self.mocks = Mocks(
+        self.mock_module = Mocks(
             mock_config=self.argsn["mocks"],
             test_mode=self.test_mode,
             mock_callbacks=[self.autooff_scheduled_cb],
@@ -119,6 +118,7 @@ class AutoClimateApp(adplus.Hass):
 
         # Initialize
         turn_off.init_listeners(self, self.appname)
+        return
 
         self.init_create_states()
         self.init_states()
@@ -140,13 +140,14 @@ class AutoClimateApp(adplus.Hass):
 
     def extra_validation(self, args):
         # Validation that Cerberus doesn't do well
-        for climate, rule in args["off_rules"].items():
-            if rule.get("off_state", "") == "perm_hold":
-                if "off_temp" not in rule:
-                    self.error(f'Invalid rule. Perm_hold needs an "off_temp": {rule}')
-                if "perm_hold_string" not in rule:
+        for climate, rule in self.entity_rules.items():
+            offrule = rule.get("off_state", {})
+            if offrule.get("state", "") == "perm_hold":
+                if "temp" not in offrule:
+                    self.error(f'Invalid offrule. Perm_hold needs an "temp": {offrule}')
+                if "perm_hold_string" not in offrule:
                     self.error(
-                        f'Invalid rule. Perm_hold needs an "perm_hold_string": {rule}'
+                        f'Invalid offrule. Perm_hold needs an "perm_hold_string": {offrule}'
                     )
 
             state = self.get_state(climate, attribute="all")

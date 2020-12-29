@@ -13,27 +13,11 @@ import adplus
 from adplus import Hass
 
 adplus.importlib.reload(adplus)
-from autoclimate.utils import climate_name
+from _autoclimate.utils import climate_name
+from _autoclimate.unoccupied import get_unoccupied_time_for
 
 
 class State(Hass):
-    CONFIG_SCHEMA = {
-        "required": True,
-        "type": "dict",
-        "valuesrules": {
-            "type": "dict",
-            "schema": {
-                "off_state": {
-                    "type": "string",
-                    "required": True,
-                    "allowed": ["away", "off", "perm_hold"],
-                },
-                "off_temp": {"type": "number", "required": False},
-                "perm_hold_string": {"type": "string", "required": False},
-            },
-        },
-    }
-
     def __init__(
         self,
         *args,
@@ -44,7 +28,7 @@ class State(Hass):
         test_mode: bool,
     ):
         super().__init__(*args)
-        self.config = adplus.normalized_args(self, self.CONFIG_SCHEMA, config)
+        self.config = config
         self.appname = appname
         self.app_state_name = f"app.{self.appname}_state"
         self.test_mode = test_mode
@@ -192,7 +176,7 @@ class State(Hass):
             #
             if not self.state[entity]["offline"]:
                 try:
-                    state, duration_off, last_on_date = self.get_unoccupied_time_for(
+                    state, duration_off, last_on_date = get_unoccupied_time_for(
                         entity
                     )
                     if state == "on":

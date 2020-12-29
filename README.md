@@ -145,7 +145,7 @@ ecobee2_state_reason: Thermostat is off
 ## MQ Events
     listens:
         app.{name}_turn_off_all
-        ("name" from autoclimate.yaml "name")
+        ("name" from _autoclimate.yaml "name")
     fires:
         None
 
