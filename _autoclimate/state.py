@@ -22,6 +22,7 @@ class State:
         self,
         hass: Hass,
         config: dict,
+        poll_frequency: int,
         appname: str,
         climates: list,
         create_temp_sensors: bool,
@@ -29,6 +30,7 @@ class State:
     ):
         self.hass = hass
         self.config = config
+        self.poll_frequency = poll_frequency
         self.appname = appname
         self.app_state_name = f"app.{self.appname}_state"
         self.test_mode = test_mode
@@ -47,9 +49,9 @@ class State:
             self.hass.run_in(self.create_temp_sensors, 0)
         self.hass.run_in(self.init_climate_listeners, 0)
 
-    def create_hass_stateobj(self, kwargs):
-        self.hass.log(f'###state_create_obj: {self.hass.get_app_pin()} -- thread_id: {self.hass.get_pin_thread()}')
+        self.hass.run_every(self.get_and_publish_state, "now", 60 * 60 * self.poll_frequency)
 
+    def create_hass_stateobj(self, kwargs):
         # APP_STATE
         self.hass.set_state(
             self.app_state_name,

@@ -108,6 +108,7 @@ class AutoClimate(adplus.Hass):
         self.state_module = State(
             hass=self,
             config=self.entity_rules,
+            poll_frequency=self.argsn["poll_frequency"],
             appname=self.appname,
             climates=self.climates,
             create_temp_sensors=self.argsn["create_temp_sensors"],
