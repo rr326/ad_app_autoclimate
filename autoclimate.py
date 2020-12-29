@@ -10,7 +10,7 @@ adplus.importlib.reload(adplus)
 from autoclimate.unoccupied import get_unoccupied_time_for
 from autoclimate.utils import climate_name, offstate
 import autoclimate.turn_off as turn_off
-from autoclimate.mocks import init_mocks
+from autoclimate.mocks import Mocks
 
 adplus.importlib.reload(turn_off)
 
@@ -70,18 +70,17 @@ class AutoClimateApp(adplus.Hass):
     See README.md for documentation.
     See autoclimate.yaml.sample for sample configuration.
 
-    ## Events 
+    ## Events
     Events have TWO names:
     event = "autoclimate" for ALL events
     sub_event = app.{appname}_event - this is the event you actually care about
 
-    Why? To trigger an event in Lovelace, you need to trigger a script, where you 
+    Why? To trigger an event in Lovelace, you need to trigger a script, where you
     have to hardcode the event name, but can send template data in the body. So
-    rather than have to write different scripts for each event, here you create 
-    *one* script to trigger the event and put the event you care about in a 
-    sub_event kwarg. 
+    rather than have to write different scripts for each event, here you create
+    *one* script to trigger the event and put the event you care about in a
+    sub_event kwarg.
     """
-
 
     EVENT_TRIGGER = "autoclimate"
 
@@ -102,7 +101,16 @@ class AutoClimateApp(adplus.Hass):
         self.climates = list(self.argsn["off_rules"].keys())
         self.log(f"Climates controlled: {self.climates}")
 
-
+        #
+        # Initialize sub-classes
+        #
+        self.mocks = Mocks(
+            mock_config=self.argsn["mocks"],
+            test_mode=self.test_mode,
+            mock_callbacks=[self.autooff_scheduled_cb],
+            init_delay=1,
+            mock_delay=1,
+        )
 
         # Initialize
         turn_off.init_listeners(self, self.appname)
@@ -124,11 +132,6 @@ class AutoClimateApp(adplus.Hass):
         # Auto off - every hour
         # This will also get_and_publish_state
         self.run_every(self.autooff_scheduled_cb, "now", 60 * 60 * self.poll_frequency)
-
-        # Init Mocks
-        if self.test_mode:
-            self.run_in(init_mocks, 0, mock_config = self.argsn.get("mocks"), mock_callback=self.autooff_scheduled_cb)
-
 
     def extra_validation(self, args):
         # Validation that Cerberus doesn't do well
@@ -226,7 +229,9 @@ class AutoClimateApp(adplus.Hass):
 
         self.publish_state()
 
-    def get_entity_state(self, entity: str, mock_data: Optional[dict] = None) -> Tuple[str, str, float]:
+    def get_entity_state(
+        self, entity: str, mock_data: Optional[dict] = None
+    ) -> Tuple[str, str, float]:
         state_obj: dict = self.get_state(entity, attribute="all")  # type: ignore
         return offstate(
             entity,
@@ -237,7 +242,7 @@ class AutoClimateApp(adplus.Hass):
             mock_data,
         )
 
-    def get_all_entities_state(self, *args, mock_data: Optional[dict]=None):
+    def get_all_entities_state(self, *args, mock_data: Optional[dict] = None):
         """
         temp
             * value = valid setpoint
@@ -245,7 +250,9 @@ class AutoClimateApp(adplus.Hass):
             * None = system is off
         """
         for entity in self.climates:
-            summarized_state, state_reason, current_temp = self.get_entity_state(entity, mock_data)
+            summarized_state, state_reason, current_temp = self.get_entity_state(
+                entity, mock_data
+            )
 
             #
             # Current_temp
