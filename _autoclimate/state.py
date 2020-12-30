@@ -14,7 +14,7 @@ from adplus import Hass
 
 adplus.importlib.reload(adplus)
 from _autoclimate.utils import climate_name
-from _autoclimate.unoccupied import get_unoccupied_time_for
+from _autoclimate.occupancy import get_unoccupied_time_for
 
 
 class State:
@@ -47,7 +47,9 @@ class State:
             self.hass.run_in(self.create_temp_sensors, 0)
         self.hass.run_in(self.init_climate_listeners, 0)
 
-        self.hass.run_every(self.get_and_publish_state, "now", 60 * 60 * self.poll_frequency)
+        self.hass.run_every(
+            self.get_and_publish_state, "now", 60 * 60 * self.poll_frequency
+        )
 
     def create_hass_stateobj(self, kwargs):
         # APP_STATE
@@ -179,7 +181,9 @@ class State:
             #
             if not self.state[entity]["offline"]:
                 try:
-                    state, duration_off, last_on_date = get_unoccupied_time_for(entity, self.config[entity], self.hass)
+                    state, duration_off, last_on_date = get_unoccupied_time_for(
+                        entity, self.config[entity], self.hass
+                    )
                     if state == "on":
                         self.state[entity]["unoccupied"] = False
                     else:

@@ -7,7 +7,7 @@ import adplus
 from adplus import Hass
 
 adplus.importlib.reload(adplus)
-from _autoclimate.unoccupied import get_unoccupied_time_for
+from _autoclimate.occupancy import get_unoccupied_time_for
 import _autoclimate.turn_off as turn_off
 from _autoclimate.mocks import Mocks
 from _autoclimate.state import State
@@ -167,17 +167,6 @@ class AutoClimate(adplus.Hass):
     def trigger_sub_events(self):
         pass
 
-    def get_unoccupied_time_for(
-        self, entity
-    ) -> Tuple[Optional[str], Optional[float], Optional[dt.datetime]]:
-        try:
-            config = self.argsn["auto_off"][entity]
-        except KeyError:
-            self.error(f"Unable to get config for {entity}")
-            return None, None, None
-
-        hassapi: Hass = self.get_plugin_api("HASS")  # type: ignore
-        return get_unoccupied_time_for(entity, config, hassapi)
 
     def autooff_scheduled_cb(self, kwargs):
         """
@@ -203,7 +192,7 @@ class AutoClimate(adplus.Hass):
                     self.call_service("climate/turn_on", entity_id=entity)
                 self.lb_log(f"{entity} - Turned thermostat on.")
 
-            oc_state, duration_off, last_on_date = self.get_unoccupied_time_for(entity)
+            oc_state, duration_off, last_on_date = get_unoccupied_time_for(entity, self.argsn["auto_off"][entity], self)
             if oc_state != state["state"] and not self.test_mode:
                 self.warn(
                     f'Programming error - oc_state ({oc_state}) != state ({state["state"]}) for {entity}'
