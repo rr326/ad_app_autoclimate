@@ -11,19 +11,24 @@ from _autoclimate.occupancy import get_unoccupied_time_for
 import _autoclimate.turn_off as turn_off
 from _autoclimate.mocks import Mocks
 from _autoclimate.state import State
+from _autoclimate.occupancy import Occupancy
 import _autoclimate
 import _autoclimate.state
 import _autoclimate.mocks
+import _autoclimate.occupancy
 
 adplus.importlib.reload(_autoclimate)
 adplus.importlib.reload(_autoclimate.state)
 adplus.importlib.reload(_autoclimate.mocks)
+adplus.importlib.reload(_autoclimate.occupancy)
+
 
 
 SCHEMA = {
     "name": {"required": True, "type": "string"},
     "poll_frequency": {"required": True, "type": "number"},
     "test_mode": {"required": False, "type": "boolean", "default": False},
+    "run_mocks": {"required": False, "type": "boolean", "default": False},
     "create_temp_sensors": {"required": True, "type": "boolean"},
     "entity_rules": {
         "required": True,
@@ -118,10 +123,18 @@ class AutoClimate(adplus.Hass):
         self.mock_module = Mocks(
             hass=self,
             mock_config=self.argsn["mocks"],
-            test_mode=self.test_mode,
+            run_mocks=self.argsn["run_mocks"],
             mock_callbacks=[self.autooff_scheduled_cb],
             init_delay=1,
             mock_delay=1,
+        )
+
+        self.occupancy_module = Occupancy(
+            hass=self,
+            config = self.entity_rules,
+            appname = self.appname,
+            climates=self.climates,
+            test_mode = self.test_mode
         )
 
         # Initialize

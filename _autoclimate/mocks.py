@@ -8,18 +8,18 @@ class Mocks():
         hass: Hass,
         mock_config: dict,
         mock_callbacks: List[Callable],
-        test_mode: bool = False,
+        run_mocks: bool = False,
         init_delay: int = 1,
         mock_delay: int = 1,
     ):
         self.hass = hass
         self.config = mock_config
-        self.test_mode = test_mode
+        self.run_mocks = run_mocks
         self.callbacks = mock_callbacks
         self.init_delay = init_delay
         self.mock_delay = mock_delay
 
-        if self.test_mode:
+        if self.run_mocks:
             self.hass.run_in(self.init_mocks, self.init_delay)
 
     def init_mocks(self, kwargs):
