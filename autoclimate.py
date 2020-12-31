@@ -7,7 +7,6 @@ import adplus
 from adplus import Hass
 
 adplus.importlib.reload(adplus)
-from _autoclimate.occupancy import get_unoccupied_time_for
 import _autoclimate.turn_off as turn_off
 from _autoclimate.mocks import Mocks
 from _autoclimate.state import State
@@ -205,7 +204,7 @@ class AutoClimate(adplus.Hass):
                     self.call_service("climate/turn_on", entity_id=entity)
                 self.lb_log(f"{entity} - Turned thermostat on.")
 
-            oc_state, duration_off, last_on_date = get_unoccupied_time_for(entity, self.argsn["auto_off"][entity], self)
+            oc_state, duration_off, last_on_date = self.occupancy_module.get_unoccupied_time_for(climate=entity)
             if oc_state != state["state"] and not self.test_mode:
                 self.warn(
                     f'Programming error - oc_state ({oc_state}) != state ({state["state"]}) for {entity}'

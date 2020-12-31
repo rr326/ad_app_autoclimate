@@ -14,7 +14,7 @@ from adplus import Hass
 
 adplus.importlib.reload(adplus)
 from _autoclimate.utils import climate_name
-from _autoclimate.occupancy import get_unoccupied_time_for
+from _autoclimate.occupancy import Occupancy
 
 
 class State:
@@ -181,13 +181,17 @@ class State:
             #
             if not self.state[entity]["offline"]:
                 try:
-                    state, duration_off, last_on_date = get_unoccupied_time_for(
-                        entity, self.config[entity], self.hass
+                    last_on_date = self.hass.get_state(
+                        Occupancy.unoccupied_sensor_name_static(self.appname, entity)
                     )
-                    if state == "on":
+                    if last_on_date == Occupancy.UNOCCUPIED_SINCE_OCCUPIED_VALUE:
                         self.state[entity]["unoccupied"] = False
+                    elif last_on_date is None:
+                        self.state[entity]["unoccupied"] = None
                     else:
-                        self.state[entity]["unoccupied"] = duration_off
+                        self.state[entity][
+                            "unoccupied"
+                        ] = Occupancy.duration_off_static(self.hass, last_on_date)
                 except Exception as err:
                     self.hass.error(f"Error getting occupancy for {entity}. Err: {err}")
 

@@ -21,6 +21,8 @@ Reason: That way you do auto off if unoccupied since AND last_manual_change > X 
 """
 
 class Occupancy:
+    UNOCCUPIED_SINCE_OCCUPIED_VALUE = dt.datetime.max
+
     def __init__(
         self,
         hass: Hass,
@@ -38,8 +40,12 @@ class Occupancy:
         self.hass.run_in(self.create_occupancy_sensors, 0)
         self.hass.run_in(self.init_occupancy_listeners, 0.1)
 
-    def unoccupied_sensor_name(self, entity):
-        return f"sensor.{self.appname}_{climate_name(entity)}_unoccupied_since"
+    def unoccupied_sensor_name(self, climate):
+        return self.unoccupied_sensor_name_static(self.appname, climate)
+    
+    @staticmethod
+    def unoccupied_sensor_name_static(appname, climate):
+        return f"sensor.{appname}_{climate_name(climate)}_unoccupied_since"
 
     def create_occupancy_sensors(self, kwargs):
         # Unoccupied Since  Sensors
@@ -97,7 +103,7 @@ class Occupancy:
 
     def oc_sensor_val_to_last_on_date(self, state, last_on_date):
         if state == "on":
-            return dt.datetime.max
+            return self.UNOCCUPIED_SINCE_OCCUPIED_VALUE
         elif state in  ["off", "unavailable"]:
             return last_on_date
         else:
@@ -112,71 +118,68 @@ class Occupancy:
     def get_unoccupied_time_for(self, climate=None, sensor=None):
         oc_sensor = self.get_sensor(climate=climate, sensor=sensor)
 
-        state, duration_off, last_on_date = _occupancy_length(oc_sensor, self.hass)
+        state, duration_off, last_on_date = self._history_occupancy_info(oc_sensor)
         return state, duration_off, last_on_date
 
-def get_unoccupied_time_for(
-    entity: str, config: dict, hassapi: Hass
-) -> Tuple[Optional[str], Optional[float], Optional[dt.datetime]]:
-    hassapi.log('## REMOVE get_unoccupied_time_for')
-    try:
-        oc_sensor = config["occupancy_sensor"]
-    except KeyError:
-        hassapi.error(f"Unable to get occupancy_sensor for {entity}")
-        return None, None, None
-
-    state, duration_off, last_on_date = _occupancy_length(oc_sensor, hassapi)
-    return state, duration_off, last_on_date
+    @staticmethod
+    def duration_off_static(hass, dateval):
+        if isinstance(dateval, str):
+            dateval = dt.datetime.fromisoformat(dateval)
+        duration_off_hours = round(
+            (hass.get_now() - dateval).total_seconds() / (60 * 60), 2
+        )
+        hass.log(f'duration_off: {dateval} --> {duration_off_hours}')
+        return duration_off_hours
 
 
-def _occupancy_length(sensor_id: str, hassapi: Hass, days: int = 10):
-    """
-    returns: state (on/off/unavailable), duration_off (hours float / None), last_on_date (datetime, None)
-    state = state of occupancy sensor
+    def _history_occupancy_info(self,sensor_id: str, days: int = 10):
+        """
+        returns: state (on/off/unavailable), duration_off (hours float / None), last_on_date (datetime, None)
+        state = state of occupancy sensor
 
-    All based on an occupancy sensor's history data.
-    {
-        "entity_id": "binary_sensor.seattle_occupancy",
-        "state": "off", # on/off/unavailable 
-        "attributes": {
-            "friendly_name": "Seattle Occupancy",
-            "device_class": "occupancy"
-        },
-        "last_changed": "2020-10-28T13:10:47.384057+00:00",
-        "last_updated": "2020-10-28T13:10:47.384057+00:00"
-    }
+        All based on an occupancy sensor's history data.
+        {
+            "entity_id": "binary_sensor.seattle_occupancy",
+            "state": "off", # on/off/unavailable 
+            "attributes": {
+                "friendly_name": "Seattle Occupancy",
+                "device_class": "occupancy"
+            },
+            "last_changed": "2020-10-28T13:10:47.384057+00:00",
+            "last_updated": "2020-10-28T13:10:47.384057+00:00"
+        }
 
-    Note - it looks like the occupancy sensor properly handles offline by returning 
-    an "unavailble" status. (Unlike temp sensors, which show the last value.)
-    """
-    data: List = hassapi.get_history(entity_id=sensor_id, days=days)  # type: ignore
+        Note - it looks like the occupancy sensor properly handles offline by returning 
+        an "unavailble" status. (Unlike temp sensors, which show the last value.)
+        """
+        data: List = self.hass.get_history(entity_id=sensor_id, days=days)  # type: ignore
 
-    if not data or len(data) == 0:
-        hassapi.warn(f"get_history returned no data for entity: {sensor_id}. Exiting")
-        return "error", None, None
-    edata = data[0]
+        if not data or len(data) == 0:
+            self.hass.warn(f"get_history returned no data for entity: {sensor_id}. Exiting")
+            return "error", None, None
+        edata = data[0]
 
-    # the get_history() fn doesn't say it guarantees sort (though it appears to be)
-    edata = list(reversed(sorted(edata, key=lambda rec: rec["last_updated"])))
+        # the get_history() fn doesn't say it guarantees sort (though it appears to be)
+        edata = list(reversed(sorted(edata, key=lambda rec: rec["last_updated"])))
 
-    current_state = edata[0]["state"]
-    if current_state == "on":
-        return "on", None, None
+        current_state = edata[0]["state"]
+        if current_state == "on":
+            return "on", None, None
 
-    last_on_date = None
-    now: dt.datetime = hassapi.get_now()  # type: ignore
-    for rec in edata:
-        if rec.get("state") == "on":
-            last_on_date = dt.datetime.fromisoformat(rec["last_updated"])
-            duration_off_hours = round(
-                (now - last_on_date).total_seconds() / (60 * 60), 2
-            )
-            return current_state, duration_off_hours, last_on_date
+        last_on_date = None
+        now: dt.datetime = self.hass.get_now()  # type: ignore
+        for rec in edata:
+            if rec.get("state") == "on":
+                last_on_date = dt.datetime.fromisoformat(rec["last_updated"])
+                duration_off_hours = round(
+                    (now - last_on_date).total_seconds() / (60 * 60), 2
+                )
+                return current_state, duration_off_hours, last_on_date
 
-    # Can not find a last on time. Give the total time shown.
-    min_time_off = round(
-        (now - dt.datetime.fromisoformat(edata[-1]["last_updated"])).seconds
-        / (60 * 60),
-        2,
-    )
-    return current_state, min_time_off, None
+        # Can not find a last on time. Give the total time shown.
+        min_time_off = round(
+            (now - dt.datetime.fromisoformat(edata[-1]["last_updated"])).seconds
+            / (60 * 60),
+            2,
+        )
+        return current_state, min_time_off, None
