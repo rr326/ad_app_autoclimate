@@ -1,26 +1,21 @@
-import datetime as dt
 import json  # noqa
-import math
-from typing import Optional, Tuple
 
 import adplus
-from adplus import Hass
 
 adplus.importlib.reload(adplus)
-import _autoclimate.turn_off as turn_off
-from _autoclimate.mocks import Mocks
-from _autoclimate.state import State
-from _autoclimate.occupancy import Occupancy
 import _autoclimate
-import _autoclimate.state
 import _autoclimate.mocks
 import _autoclimate.occupancy
+import _autoclimate.state
+import _autoclimate.turn_off as turn_off
+from _autoclimate.mocks import Mocks
+from _autoclimate.occupancy import Occupancy
+from _autoclimate.state import State
 
 adplus.importlib.reload(_autoclimate)
 adplus.importlib.reload(_autoclimate.state)
 adplus.importlib.reload(_autoclimate.mocks)
 adplus.importlib.reload(_autoclimate.occupancy)
-
 
 
 SCHEMA = {
@@ -130,10 +125,10 @@ class AutoClimate(adplus.Hass):
 
         self.occupancy_module = Occupancy(
             hass=self,
-            config = self.entity_rules,
-            appname = self.appname,
+            config=self.entity_rules,
+            appname=self.appname,
             climates=self.climates,
-            test_mode = self.test_mode
+            test_mode=self.test_mode,
         )
 
         # Initialize
@@ -179,7 +174,6 @@ class AutoClimate(adplus.Hass):
     def trigger_sub_events(self):
         pass
 
-
     def autooff_scheduled_cb(self, kwargs):
         """
         Turn off any thermostats that have been on too long.
@@ -204,7 +198,11 @@ class AutoClimate(adplus.Hass):
                     self.call_service("climate/turn_on", entity_id=entity)
                 self.lb_log(f"{entity} - Turned thermostat on.")
 
-            oc_state, duration_off, last_on_date = self.occupancy_module.get_unoccupied_time_for(climate=entity)
+            (
+                oc_state,
+                duration_off,
+                last_on_date,
+            ) = self.occupancy_module.get_unoccupied_time_for(climate=entity)
             if oc_state != state["state"] and not self.test_mode:
                 self.warn(
                     f'Programming error - oc_state ({oc_state}) != state ({state["state"]}) for {entity}'

@@ -1,20 +1,13 @@
-from adplus import Hass
-import math
 import json  # noqa
 import math
 from typing import Optional, Tuple
-import math
-from typing import Optional, Tuple
-
-from appdaemon.adapi import ADAPI
-
 
 import adplus
 from adplus import Hass
 
 adplus.importlib.reload(adplus)
-from _autoclimate.utils import climate_name
 from _autoclimate.occupancy import Occupancy
+from _autoclimate.utils import climate_name
 
 
 class State:
@@ -195,7 +188,9 @@ class State:
                             "unoccupied"
                         ] = Occupancy.duration_off_static(self.hass, last_on_date)
                 except Exception as err:
-                    self.hass.error(f"Error getting occupancy for {entity}. Err: {err}.")
+                    self.hass.error(
+                        f"Error getting occupancy for {entity}. Err: {err}."
+                    )
 
     @property
     def autoclimate_overall_state(self):
@@ -318,32 +313,35 @@ class State:
         # Unexpected value
         return "none", "error - should not be here", current_temp
 
-    def is_offline(self, climate: str):
-        # econfig = self.config.get(climate)
-        # if econfig is None:
-        #     self.hass.error(f'Could not get config for {climate}')
-        #     return None
+    def is_offline(self, namespace, domain, service, kwargs) -> bool:
+        return self.state[kwargs["climate"]]["offline"]
 
-        return self.state[climate]["offline"]
-        
     def is_on(self, namespace, domain, service, kwargs) -> bool:
-        return self.state[kwargs["climate"]]["state"] == 'on'
+        return self.state[kwargs["climate"]]["state"] == "on"
 
     def is_off(self, namespace, domain, service, kwargs) -> bool:
-        return self.state[kwargs["climate"]]["state"] == 'off'        
+        return self.state[kwargs["climate"]]["state"] == "off"
 
     def entity_state(self, namespace, domain, service, kwargs) -> Optional[str]:
-        return self.state[kwargs["climate"]]["state"] 
+        return self.state[kwargs["climate"]]["state"]
 
     def is_hardoff(self, namespace, domain, service, kwargs) -> bool:
         state = self.hass.get_state(entity_id=kwargs["climate"])
         return state == "off"
 
     def register_services(self, kwargs: dict):
-        callbacks = [self.is_on, self.is_off, self.entity_state, self.is_hardoff]
+        callbacks = [
+            self.is_offline,
+            self.is_on,
+            self.is_off,
+            self.entity_state,
+            self.is_hardoff,
+        ]
         for callback in callbacks:
             service_name = f"{self.appname}/{callback.__name__}"
             self.hass.register_service(service_name, callback, namespace=self.appname)
-            self.hass.log(f'Registered service: {service_name}')
+            self.hass.log(f"Registered service: {service_name}")
             # Test
-            self.hass.log(f'TEST: {service_name}: {self.hass.call_service(service_name, climate="climate.gym", namespace=self.appname)}')
+            self.hass.log(
+                f'TEST: {service_name}: {self.hass.call_service(service_name, climate="climate.gym", namespace=self.appname)}'
+            )
