@@ -47,5 +47,3 @@ It can be used by an app like AutoClimateApp.
 
 #     def test_event(self, event_name, data, kwargs):
 #         self.log(f"## test_event triggered: {event_name} -- {data} -- {kwargs}")
-
-   

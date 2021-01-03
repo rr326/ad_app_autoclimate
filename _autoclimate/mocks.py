@@ -1,8 +1,9 @@
+from typing import Callable, List
+
 from adplus import Hass
-from typing import List, Callable
 
 
-class Mocks():
+class Mocks:
     def __init__(
         self,
         hass: Hass,
@@ -30,11 +31,11 @@ class Mocks():
                 self.run_mock,
                 mock_delay := mock_delay + self.mock_delay,
                 mock_config=mock,
-                )
+            )
 
     def run_mock(self, kwargs):
         """
-        Weird - I can't send the callback in the init_mocks above. Some sort of strange pickling / lock error. 
+        Weird - I can't send the callback in the init_mocks above. Some sort of strange pickling / lock error.
         So instead I'll do the callback loop here.
         """
         mock_config = kwargs["mock_config"]

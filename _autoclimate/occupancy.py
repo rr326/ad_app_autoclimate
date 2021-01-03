@@ -1,10 +1,9 @@
 import datetime as dt
-from typing import List, Optional, Tuple
-from _autoclimate.utils import climate_name
-import math
-from dateutil import tz
+from typing import List
 
+from _autoclimate.utils import climate_name
 from adplus import Hass
+from dateutil import tz
 
 """
 Create new sensors
@@ -20,6 +19,7 @@ Reason: That way you do auto off if unoccupied since AND last_manual_change > X 
 # TODO
 * Offline - handle
 """
+
 
 class Occupancy:
     UNOCCUPIED_SINCE_OCCUPIED_VALUE = dt.datetime(dt.MAXYEAR, 12, 29, tzinfo=tz.tzutc())
@@ -43,7 +43,7 @@ class Occupancy:
 
     def unoccupied_sensor_name(self, climate):
         return self.unoccupied_sensor_name_static(self.appname, climate)
-    
+
     @staticmethod
     def unoccupied_sensor_name_static(appname, climate):
         return f"sensor.{appname}_{climate_name(climate)}_unoccupied_since"
@@ -61,59 +61,73 @@ class Occupancy:
                     "device_class": "timestamp",
                 },
             )
-            self.hass.log(f"Created sensor: {unoccupied_sensor_name}. Initial state: {last_on_date}")     
-    
+            self.hass.log(
+                f"Created sensor: {unoccupied_sensor_name}. Initial state: {last_on_date}"
+            )
+
     def init_occupancy_listeners(self, kwargs):
         """
-        This will create a different occupancy sensor for each climate, 
+        This will create a different occupancy sensor for each climate,
         so if multiple climates have the same oc_sensor, you'll get multiple
-        listeners.  
+        listeners.
         """
         for climate in self.climates:
             oc_sensor = self.get_sensor(climate=climate)
-            self.hass.log(f'listen_state: {oc_sensor}')
+            self.hass.log(f"listen_state: {oc_sensor}")
             self.hass.listen_state(
-                self.update_occupancy_sensor, entity=oc_sensor, attribute="all",climate=climate
-            )         
+                self.update_occupancy_sensor,
+                entity=oc_sensor,
+                attribute="all",
+                climate=climate,
+            )
 
     def update_occupancy_sensor(self, entity, attribute, old, new, kwargs):
         climate = kwargs["climate"]
         # self.hass.log(f'update_occupancy_sensor: {entity} -- {climate} -- {new} -- {attribute}')
-        last_on_date = self.oc_sensor_val_to_last_on_date(new["state"], new["last_updated"])
+        last_on_date = self.oc_sensor_val_to_last_on_date(
+            new["state"], new["last_updated"]
+        )
         unoccupied_sensor_name = self.unoccupied_sensor_name(climate)
         self.hass.update_state(
             unoccupied_sensor_name,
             state=last_on_date,
         )
-        self.hass.log(f'update_occupancy_sensor - {unoccupied_sensor_name} - state: {last_on_date}')
-        
+        self.hass.log(
+            f"update_occupancy_sensor - {unoccupied_sensor_name} - state: {last_on_date}"
+        )
 
     def get_sensor(self, climate=None, sensor=None):
         if climate and sensor:
-            raise RuntimeError(f'Programming error - history_last_on_date: give climate OR sensor')
+            raise RuntimeError(
+                f"Programming error - history_last_on_date: give climate OR sensor"
+            )
         elif climate is None and sensor is None:
-            raise RuntimeError(f'Programming error - need a climate or sensor. Got None.')
+            raise RuntimeError(
+                f"Programming error - need a climate or sensor. Got None."
+            )
         elif sensor:
             return sensor
         else:
             try:
                 oc_sensor = self.config[climate]["occupancy_sensor"]
             except KeyError:
-                raise RuntimeError(f"Unable to get occupancy_sensor for {climate}")  
-            return oc_sensor  
+                raise RuntimeError(f"Unable to get occupancy_sensor for {climate}")
+            return oc_sensor
 
     def oc_sensor_val_to_last_on_date(self, state, last_on_date):
         if state == "on":
             return self.UNOCCUPIED_SINCE_OCCUPIED_VALUE
-        elif state in  ["off", "unavailable"]:
+        elif state in ["off", "unavailable"]:
             return last_on_date
         else:
-            self.hass.log(f'Unexpected last_on_date state: {state}')
+            self.hass.log(f"Unexpected last_on_date state: {state}")
             # Error or offline
             return None
 
     def history_last_on_date(self, climate=None, sensor=None):
-        state, duration_off, last_on_date = self.get_unoccupied_time_for(climate, sensor)
+        state, duration_off, last_on_date = self.get_unoccupied_time_for(
+            climate, sensor
+        )
         return self.oc_sensor_val_to_last_on_date(state, last_on_date)
 
     def get_unoccupied_time_for(self, climate=None, sensor=None):
@@ -133,13 +147,10 @@ class Occupancy:
         if dateval > now:
             return None
 
-        duration_off_hours = round(
-            (now - dateval).total_seconds() / (60 * 60), 2
-        )
+        duration_off_hours = round((now - dateval).total_seconds() / (60 * 60), 2)
         return duration_off_hours
 
-
-    def _history_occupancy_info(self,sensor_id: str, days: int = 10):
+    def _history_occupancy_info(self, sensor_id: str, days: int = 10):
         """
         returns: state (on/off/unavailable), duration_off (hours float / None), last_on_date (datetime, None)
         state = state of occupancy sensor
@@ -147,7 +158,7 @@ class Occupancy:
         All based on an occupancy sensor's history data.
         {
             "entity_id": "binary_sensor.seattle_occupancy",
-            "state": "off", # on/off/unavailable 
+            "state": "off", # on/off/unavailable
             "attributes": {
                 "friendly_name": "Seattle Occupancy",
                 "device_class": "occupancy"
@@ -156,13 +167,15 @@ class Occupancy:
             "last_updated": "2020-10-28T13:10:47.384057+00:00"
         }
 
-        Note - it looks like the occupancy sensor properly handles offline by returning 
+        Note - it looks like the occupancy sensor properly handles offline by returning
         an "unavailble" status. (Unlike temp sensors, which show the last value.)
         """
         data: List = self.hass.get_history(entity_id=sensor_id, days=days)  # type: ignore
 
         if not data or len(data) == 0:
-            self.hass.warn(f"get_history returned no data for entity: {sensor_id}. Exiting")
+            self.hass.warn(
+                f"get_history returned no data for entity: {sensor_id}. Exiting"
+            )
             return "error", None, None
         edata = data[0]
 

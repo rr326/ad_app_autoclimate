@@ -1,6 +1,4 @@
-from appdaemon.adapi import ADAPI
 import adplus
-
 
 #
 # Config
@@ -11,11 +9,13 @@ EVENT_TURN_OFF_ALL = "turn_off_all"
 #
 # Event names, given app name
 #
-def event_all_off_name(appname:str) -> str:
+def event_all_off_name(appname: str) -> str:
     return f"app.{appname}_turn_off_all"
 
-def event_entity_off_name(appname:str) -> str:
+
+def event_entity_off_name(appname: str) -> str:
     return f"app.{appname}_turn_off_entity"
+
 
 #
 # Low-level function
@@ -84,12 +84,8 @@ def turn_off_entity(
 # Init Listeners
 #
 def init_listeners(self: adplus.Hass, appname):
-    self.listen_event(
-        cb_turn_off_all, event=event_all_off_name(appname)
-    )
-    self.listen_event(
-        cb_turn_off_entity, event=event_entity_off_name(appname)
-    )
+    self.listen_event(cb_turn_off_all, event=event_all_off_name(appname))
+    self.listen_event(cb_turn_off_entity, event=event_entity_off_name(appname))
 
 
 #
