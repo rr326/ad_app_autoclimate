@@ -193,7 +193,7 @@ class State:
                             "unoccupied"
                         ] = Occupancy.duration_off_static(self.hass, last_on_date)
                 except Exception as err:
-                    self.hass.error(f"Error getting occupancy for {entity}. Err: {err}")
+                    self.hass.error(f"Error getting occupancy for {entity}. Err: {err}.")
 
     @property
     def autoclimate_overall_state(self):

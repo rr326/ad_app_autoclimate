@@ -2,6 +2,7 @@ import datetime as dt
 from typing import List, Optional, Tuple
 from _autoclimate.utils import climate_name
 import math
+from dateutil import tz
 
 from adplus import Hass
 
@@ -21,7 +22,7 @@ Reason: That way you do auto off if unoccupied since AND last_manual_change > X 
 """
 
 class Occupancy:
-    UNOCCUPIED_SINCE_OCCUPIED_VALUE = dt.datetime.max
+    UNOCCUPIED_SINCE_OCCUPIED_VALUE = dt.datetime(dt.MAXYEAR, 12, 31, tzinfo=tz.tzlocal())
 
     def __init__(
         self,
@@ -125,10 +126,11 @@ class Occupancy:
     def duration_off_static(hass, dateval):
         if isinstance(dateval, str):
             dateval = dt.datetime.fromisoformat(dateval)
+        if dateval.tzinfo is None:
+            dateval.replace(tzinfo=tz.tzlocal())
         duration_off_hours = round(
             (hass.get_now() - dateval).total_seconds() / (60 * 60), 2
         )
-        hass.log(f'duration_off: {dateval} --> {duration_off_hours}')
         return duration_off_hours
 
 
