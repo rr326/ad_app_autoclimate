@@ -22,7 +22,7 @@ Reason: That way you do auto off if unoccupied since AND last_manual_change > X 
 """
 
 class Occupancy:
-    UNOCCUPIED_SINCE_OCCUPIED_VALUE = dt.datetime(dt.MAXYEAR, 12, 31, tzinfo=tz.tzlocal())
+    UNOCCUPIED_SINCE_OCCUPIED_VALUE = dt.datetime(dt.MAXYEAR, 12, 29, tzinfo=tz.tzutc())
 
     def __init__(
         self,
