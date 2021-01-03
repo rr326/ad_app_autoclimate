@@ -51,6 +51,8 @@ class State:
             self.get_and_publish_state, "now", 60 * 60 * self.poll_frequency
         )
 
+        self.hass.run_in(self.register_services, 0)
+
     def create_hass_stateobj(self, kwargs):
         # APP_STATE
         self.hass.set_state(
@@ -315,3 +317,33 @@ class State:
 
         # Unexpected value
         return "none", "error - should not be here", current_temp
+
+    def is_offline(self, climate: str):
+        # econfig = self.config.get(climate)
+        # if econfig is None:
+        #     self.hass.error(f'Could not get config for {climate}')
+        #     return None
+
+        return self.state[climate]["offline"]
+        
+    def is_on(self, namespace, domain, service, kwargs) -> bool:
+        return self.state[kwargs["climate"]]["state"] == 'on'
+
+    def is_off(self, namespace, domain, service, kwargs) -> bool:
+        return self.state[kwargs["climate"]]["state"] == 'off'        
+
+    def entity_state(self, namespace, domain, service, kwargs) -> Optional[str]:
+        return self.state[kwargs["climate"]]["state"] 
+
+    def is_hardoff(self, namespace, domain, service, kwargs) -> bool:
+        state = self.hass.get_state(entity_id=kwargs["climate"])
+        return state == "off"
+
+    def register_services(self, kwargs: dict):
+        callbacks = [self.is_on, self.is_off, self.entity_state, self.is_hardoff]
+        for callback in callbacks:
+            service_name = f"{self.appname}/{callback.__name__}"
+            self.hass.register_service(service_name, callback, namespace=self.appname)
+            self.hass.log(f'Registered service: {service_name}')
+            # Test
+            self.hass.log(f'TEST: {service_name}: {self.hass.call_service(service_name, climate="climate.gym", namespace=self.appname)}')
