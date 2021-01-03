@@ -128,8 +128,13 @@ class Occupancy:
             dateval = dt.datetime.fromisoformat(dateval)
         if dateval.tzinfo is None:
             dateval.replace(tzinfo=tz.tzlocal())
+
+        now = hass.get_now()
+        if dateval > now:
+            return None
+
         duration_off_hours = round(
-            (hass.get_now() - dateval).total_seconds() / (60 * 60), 2
+            (now - dateval).total_seconds() / (60 * 60), 2
         )
         return duration_off_hours
 
