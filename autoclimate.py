@@ -8,11 +8,7 @@ import _autoclimate.mocks
 import _autoclimate.occupancy
 import _autoclimate.state
 import _autoclimate.turn_off
-from _autoclimate.mocks import Mocks
-from _autoclimate.occupancy import Occupancy
-from _autoclimate.state import State
-from _autoclimate.turn_off import TurnOff
-from _autoclimate.schema import SCHEMA
+
 
 adplus.importlib.reload(_autoclimate)
 adplus.importlib.reload(_autoclimate.state)
@@ -20,7 +16,11 @@ adplus.importlib.reload(_autoclimate.mocks)
 adplus.importlib.reload(_autoclimate.occupancy)
 adplus.importlib.reload(_autoclimate.turn_off)
 
-
+from _autoclimate.mocks import Mocks
+from _autoclimate.occupancy import Occupancy
+from _autoclimate.state import State
+from _autoclimate.turn_off import TurnOff
+from _autoclimate.schema import SCHEMA
 
 
 class AutoClimate(adplus.Hass):

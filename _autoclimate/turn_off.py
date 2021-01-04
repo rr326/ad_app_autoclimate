@@ -91,7 +91,7 @@ class TurnOff:
         # Set to "off"
         if config["off_state"]["state"] == "off":
             if not test_mode:
-                self.hass.call_service("climate/turn_off", climate_id=climate)
+                self.hass.call_service("climate/turn_off", entity_id=climate)
             self.hass.lb_log(f"{climate} - Turn off")
 
         # Set to "away"
@@ -99,7 +99,7 @@ class TurnOff:
             if not test_mode:
                 self.hass.call_service(
                     "climate/set_preset_mode",
-                    climate_id=climate,
+                    entity_id=climate,
                     preset_mode="Away",
                 )
             self.hass.lb_log(f"{climate} -  Set away mode")
@@ -109,12 +109,12 @@ class TurnOff:
             if not test_mode:
                 self.hass.call_service(
                     "climate/set_temperature",
-                    climate_id=climate,
+                    entity_id=climate,
                     temperature=config["off_state"]["temp"],
                 )
                 self.hass.call_service(
                     "climate/set_preset_mode",
-                    climate_id=climate,
+                    entity_id=climate,
                     preset_mode="Permanent Hold",
                 )
             self.hass.log(
