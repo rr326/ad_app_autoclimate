@@ -1,135 +1,185 @@
 import adplus
+import json  # noqa
+import math
+from typing import Optional, Tuple
 
-#
-# Config
-#
-EVENT_TURN_OFF_ENTITY = "turn_off_entity"
-EVENT_TURN_OFF_ALL = "turn_off_all"
+import adplus
+from adplus import Hass
 
-#
-# Event names, given app name
-#
-def event_all_off_name(appname: str) -> str:
-    return f"app.{appname}_turn_off_all"
-
-
-def event_entity_off_name(appname: str) -> str:
-    return f"app.{appname}_turn_off_entity"
+adplus.importlib.reload(adplus)
+from _autoclimate.occupancy import Occupancy
+from _autoclimate.utils import climate_name
+from _autoclimate.schema import SCHEMA
 
 
-#
-# Low-level function
-#
-def turn_off_entity(
-    adapi: adplus.Hass,
-    entity: str,
-    stateobj: dict,
-    config: dict,
-    test_mode: bool = False,
-) -> None:
-    """
-    Turn "off" a climate entity, where "off" is defined by an off rule such as:
-    climate.cabin:
-        off_state: "away"
-        off_temp:  55
-    """
+class TurnOff:
+    def __init__(
+        self,
+        hass: Hass,
+        config: dict,
+        poll_frequency: int,
+        appname: str,
+        climates: list,
+        test_mode: bool,
+        climate_state: dict,
+    ):
+        self.hass = hass
+        self.config = config
+        self.poll_frequency = poll_frequency
+        self.appname = appname
+        self.app_state_name = f"app.{self.appname}_state"
+        self.test_mode = test_mode
+        self.climates = climates
+        self.climate_state = climate_state
 
-    attributes = stateobj["attributes"]
+        self.state: dict = {}
+        self._current_temps: dict = {}  # {climate: current_temp}
 
-    if "temperature" not in attributes:
-        adapi.log(f"{entity} - Offline. Can not turn off.")
-        return
-
-    if not config:
-        adapi.error(f"No off_rule for entity: {entity}. Can not turn off.")
-        return
-
-    # Set to "off"
-    if config["off_state"] == "off":
-        retval = adapi.call_service("climate/turn_off", entity_id=entity)
-        adapi.lb_log(f"{entity} - Turn off")
-
-    # Set to "away"
-    elif config["off_state"] == "away":
-        retval = adapi.call_service(
-            "climate/set_preset_mode",
-            entity_id=entity,
-            preset_mode="Away",
-        )
-        adapi.lb_log(f"{entity} -  Set away mode")
-
-    # Set to "perm_hold"
-    elif config["off_state"] == "perm_hold":
-        retval1 = adapi.call_service(
-            "climate/set_temperature",
-            entity_id=entity,
-            temperature=config["off_temp"],
+        self.init_listeners()
+        self.hass.run_every(
+            self.autooff_scheduled_cb, "now", self.poll_frequency * 60 * 60
         )
 
-        retval2 = adapi.call_service(
-            "climate/set_preset_mode",
-            entity_id=entity,
-            preset_mode="Permanent Hold",
+    def init_listeners(self):
+        self.hass.listen_event(self.cb_turn_off_all, event=self.event_all_off_name())
+        self.hass.log(f"Listening to event: {self.event_all_off_name()}")
+        self.hass.listen_event(
+            self.cb_turn_off_climate, event=self.event_entity_off_name()
         )
-        adapi.log(
-            f"{entity} - Set Perm Hold to {config['off_temp']}. retval1: {retval1} -- retval2: {retval2}"
-        )
+        self.hass.log(f"Listening to event: {self.event_entity_off_name()}")
 
-    # Invalid config
-    else:
-        adapi.error(f"Programming error. Unexpected off_rule: {config}")
+    def event_all_off_name(self) -> str:
+        return f"app.{self.appname}_turn_off_all"
 
+    def event_entity_off_name(self) -> str:
+        return f"app.{self.appname}_turn_off_climate"
 
-#
-# Init Listeners
-#
-def init_listeners(self: adplus.Hass, appname):
-    self.listen_event(cb_turn_off_all, event=event_all_off_name(appname))
-    self.listen_event(cb_turn_off_entity, event=event_entity_off_name(appname))
+    def turn_off_climate(
+        self, climate: str, config: dict = None, test_mode: bool = False
+    ) -> None:
+        """
+        Turn "off" a climate climate, where "off" is defined by an off rule such as:
+        climate.cabin:
+            off_state: "away"
+            off_temp:  55
+        config - if given, will use from self.config. If passed, will use passed config
+        """
+        if not config:
+            config = self.config[climate]
+        else:
+            # Config passed in.
+            schema = SCHEMA["entity_rules"]["valuesrules"]["schema"]
+            try:
+                config = adplus.normalized_args(self.hass, schema, config)
+            except adplus.ConfigException as err:
+                self.hass.error(
+                    f"turn_off_climate called with passed-in config that does not validate: {config}"
+                )
+                return
 
+        stateobj = self.hass.get_state(climate, attribute="all")
+        attributes = stateobj["attributes"]
 
-#
-# Callbacks
-#
-def cb_turn_off_entity(self, event_name, data, kwargs):
-    """
-    kwargs:
-        entity: climate_string
-        config: OFF_SCHEMA (see above)
-        test_mode: bool (optional)
-    """
-    entity = kwargs["entity"]
-    config = adplus.normalized_args(self, self.OFF_SCHEMA, kwargs["config"])
-    test_mode = kwargs.get("test_mode", False)
+        if "temperature" not in attributes:
+            self.hass.log(f"{climate} - Offline. Can not turn off.")
+            return
 
-    stateobj: dict = self.get_state(entity, attribute="all")  # type: ignore
+        if not config:
+            self.hass.error(f"No off_rule for climate: {climate}. Can not turn off.")
+            return
 
-    return turn_off_entity(self, entity, stateobj, config, test_mode)
+        # Set to "off"
+        if config["off_state"]["state"] == "off":
+            if not test_mode:
+                self.hass.call_service("climate/turn_off", climate_id=climate)
+            self.hass.lb_log(f"{climate} - Turn off")
 
+        # Set to "away"
+        elif config["off_state"]["state"] == "away":
+            if not test_mode:
+                self.hass.call_service(
+                    "climate/set_preset_mode",
+                    climate_id=climate,
+                    preset_mode="Away",
+                )
+            self.hass.lb_log(f"{climate} -  Set away mode")
 
-def cb_turn_off_all(self, event_name, data, kwargs):
-    """
-    kwargs:
-        entities: [climate_string]
-        config: OFF_SCHEMA (see above)
-        test_mode: bool (optional)
-    """
-    entities = kwargs["entity"]
-    config = adplus.normalized_args(self, self.OFF_RULES_SCHEMA, kwargs["config"])
-    test_mode = kwargs.get("test_mode", False)
+        # Set to "perm_hold"
+        elif config["off_state"]["state"] == "perm_hold":
+            if not test_mode:
+                self.hass.call_service(
+                    "climate/set_temperature",
+                    climate_id=climate,
+                    temperature=config["off_state"]["temp"],
+                )
+                self.hass.call_service(
+                    "climate/set_preset_mode",
+                    climate_id=climate,
+                    preset_mode="Permanent Hold",
+                )
+            self.hass.log(
+                f"{climate} - Set Perm Hold to {config['off_state']['temp']}. "
+            )
 
-    self.lb_log("Turn heat off triggered")
-    if self.test_mode:
-        self.log("Test mode - not actually turning off heat. ")
-        return
+        # Invalid config
+        else:
+            self.hass.error(f"Programming error. Unexpected off_rule: {config}")
 
-    for entity in entities:
-        self.cb_turn_off_entity(
-            event_name,
-            data,
-            kwargs={
-                "entity": entity,
-                "config": config.get(entity, {}),
-                "test_mode": test_mode,
-            },
-        )
+    def cb_turn_off_climate(self, event_name, data, kwargs):
+        """
+        kwargs:
+            entity: climate_string
+            config: OFF_SCHEMA (see above)
+            test_mode: bool (optional)
+        """
+        climate = data["climate"]
+        config = data.get("config")
+        test_mode = data.get("test_mode")
+        return self.turn_off_climate(climate, config=config, test_mode=test_mode)
+
+    def cb_turn_off_all(self, event_name, data, kwargs):
+        all_config = data.get("config", {})
+        test_mode = data.get("test_mode")
+        for climate in self.climates:
+            config = all_config.get(climate)
+            self.turn_off_climate(climate, config=config, test_mode=test_mode)
+
+    def autooff_scheduled_cb(self, kwargs):
+        """
+        Turn off any thermostats that have been on too long.
+        """
+        for climate, state in self.climate_state.items():
+            self.hass.debug(f'autooff: {climate} - {state["state"]}')
+
+            config = self.config.get(climate)
+            if not config:
+                self.hass.log(f"autooff: No config. skipping {climate}")
+                continue
+            if not "auto_off_hours" in config:
+                self.hass.log(f"autooff: No auto_off_hours for {climate}. Skipping.")
+                continue
+            if state["state"] == "off":
+                continue
+            if state["offline"]:
+                continue  # Can't do anything
+            if state["state"] == "error_off":
+                # Off but should not be
+                self.hass.log(
+                    f"{climate} is off but should not be! Attempting to turn on."
+                )
+                if not self.test_mode:
+                    self.hass.call_service("climate/turn_on", entity_id=climate)
+                self.hass.lb_log(f"{climate} - Turned thermostat on.")
+
+            duration_off = self.climate_state[f"{climate}_unoccupied"]
+
+            if duration_off is None:
+                self.hass.warn(f"Programming error - duration_off None for {climate}")
+            elif duration_off < 0:
+                self.hass.warn(
+                    f"Programming error - Negative duration off for {climate}: {duration_off}"
+                )
+            elif duration_off > config["auto_off_hours"] or self.test_mode:
+                self.hass.lb_log(f"Autooff - Turning off {climate}")
+                if not self.test_mode:
+                    self.turn_off_climate(climate)

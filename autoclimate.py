@@ -7,61 +7,20 @@ import _autoclimate
 import _autoclimate.mocks
 import _autoclimate.occupancy
 import _autoclimate.state
-import _autoclimate.turn_off as turn_off
+import _autoclimate.turn_off
 from _autoclimate.mocks import Mocks
 from _autoclimate.occupancy import Occupancy
 from _autoclimate.state import State
+from _autoclimate.turn_off import TurnOff
+from _autoclimate.schema import SCHEMA
 
 adplus.importlib.reload(_autoclimate)
 adplus.importlib.reload(_autoclimate.state)
 adplus.importlib.reload(_autoclimate.mocks)
 adplus.importlib.reload(_autoclimate.occupancy)
+adplus.importlib.reload(_autoclimate.turn_off)
 
 
-SCHEMA = {
-    "name": {"required": True, "type": "string"},
-    "poll_frequency": {"required": True, "type": "number"},
-    "test_mode": {"required": False, "type": "boolean", "default": False},
-    "run_mocks": {"required": False, "type": "boolean", "default": False},
-    "create_temp_sensors": {"required": True, "type": "boolean"},
-    "entity_rules": {
-        "required": True,
-        "type": "dict",
-        "valuesrules": {
-            "type": "dict",
-            "required": True,
-            "schema": {
-                "off_state": {
-                    "type": "dict",
-                    "required": True,
-                    "schema": {
-                        "state": {
-                            "type": "string",
-                            "required": True,
-                            "allowed": ["away", "off", "perm_hold"],
-                        },
-                        "temp": {"type": "number", "required": False},
-                        "perm_hold_string": {"type": "string", "required": False},
-                    },
-                },
-                "occupancy_sensor": {"type": "string", "required": True},
-                "auto_off_hours": {"type": "number", "required": True},
-            },
-        },
-    },
-    "mocks": {
-        "required": False,
-        "type": "list",
-        "schema": {
-            "type": "dict",
-            "required": True,
-            "schema": {
-                "entity_id": {"required": True, "type": "string"},
-                "mock_attributes": {"required": True, "type": "dict"},
-            },
-        },
-    },
-}
 
 
 class AutoClimate(adplus.Hass):
@@ -113,15 +72,7 @@ class AutoClimate(adplus.Hass):
             create_temp_sensors=self.argsn["create_temp_sensors"],
             test_mode=self.test_mode,
         )
-
-        self.mock_module = Mocks(
-            hass=self,
-            mock_config=self.argsn["mocks"],
-            run_mocks=self.argsn["run_mocks"],
-            mock_callbacks=[self.autooff_scheduled_cb],
-            init_delay=1,
-            mock_delay=1,
-        )
+        self.climate_state = self.state_module.state
 
         self.occupancy_module = Occupancy(
             hass=self,
@@ -131,27 +82,24 @@ class AutoClimate(adplus.Hass):
             test_mode=self.test_mode,
         )
 
-        # Initialize
-        turn_off.init_listeners(self, self.appname)
-        return
+        self.turn_off_module = TurnOff(
+            hass=self,
+            config=self.entity_rules,
+            poll_frequency=self.argsn["poll_frequency"],
+            appname=self.appname,
+            climates=self.climates,
+            test_mode=self.test_mode,
+            climate_state = self.climate_state
+        )        
 
-        self.init_create_states()
-        self.init_states()
-
-        # ROSS REMOVE ALL MQ
-        # self.mq_listen_event(self.turn_off_all, self.TRIGGER_HEAT_OFF)
-
-        #
-        # get_and_publish_state:
-        #  - Initialize
-        #  - Listen to changes
-        #  - Poll hourly (via autooff)
-        self.run_in(self.get_and_publish_state, 0)
-        self.run_in(self.init_climate_listeners, 0)
-
-        # Auto off - every hour
-        # This will also get_and_publish_state
-        self.run_every(self.autooff_scheduled_cb, "now", 60 * 60 * self.poll_frequency)
+        self.mock_module = Mocks(
+            hass=self,
+            mock_config=self.argsn["mocks"],
+            run_mocks=self.argsn["run_mocks"],
+            mock_callbacks=[self.turn_off_module.autooff_scheduled_cb],
+            init_delay=1,
+            mock_delay=1,
+        )
 
     def extra_validation(self, args):
         # Validation that Cerberus doesn't do well
@@ -174,42 +122,3 @@ class AutoClimate(adplus.Hass):
     def trigger_sub_events(self):
         pass
 
-    def autooff_scheduled_cb(self, kwargs):
-        """
-        Turn off any thermostats that have been on too long.
-        """
-        autooff_config = self.argsn.get("auto_off", {})
-        self.state_module.get_and_publish_state()
-        for entity, state in self.state_module.state.items():
-            self.debug(f'autooff: {entity} - {state["state"]}')
-
-            config = autooff_config.get(entity)
-            if not config:
-                self.log(f"autooff: No config. skipping {entity}")
-                continue
-            if state["state"] == "off":
-                continue
-            if state["offline"]:
-                continue  # Can't do anything
-            if state["state"] == "error_off":
-                # Off but should not be
-                self.log(f"{entity} is off but should not be! Attempting to turn on.")
-                if not self.test_mode:
-                    self.call_service("climate/turn_on", entity_id=entity)
-                self.lb_log(f"{entity} - Turned thermostat on.")
-
-            (
-                oc_state,
-                duration_off,
-                last_on_date,
-            ) = self.occupancy_module.get_unoccupied_time_for(climate=entity)
-            if oc_state != state["state"] and not self.test_mode:
-                self.warn(
-                    f'Programming error - oc_state ({oc_state}) != state ({state["state"]}) for {entity}'
-                )
-            if duration_off is None:
-                self.warn(f"Programming error - duration_off None for {entity}")
-            elif duration_off > config["unoccupied_for"] or self.test_mode:
-                self.lb_log(f"Autooff - Turning off {entity}")
-                if not self.test_mode:
-                    self.fire_event(turn_off.EVENT_TURN_OFF_ENTITY, entity=entity)

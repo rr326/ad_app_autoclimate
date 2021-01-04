@@ -341,7 +341,3 @@ class State:
             service_name = f"{self.appname}/{callback.__name__}"
             self.hass.register_service(service_name, callback, namespace=self.appname)
             self.hass.log(f"Registered service: {service_name}")
-            # Test
-            self.hass.log(
-                f'TEST: {service_name}: {self.hass.call_service(service_name, climate="climate.gym", namespace=self.appname)}'
-            )

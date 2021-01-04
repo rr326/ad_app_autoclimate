@@ -1,15 +1,7 @@
-# Issues
+# TODO
 
-## 0. Restructure
-Restructure Autoclimate from a single configurable app into a series of services AND a configureable app. This wasy you can use ClimatePlus in any HomeAssistant automation. Probably needs to use MQTT for signaling. 
+* Remove MQPlus
 
-### Calling method
-How to enable these services?
-
-* MQTT - easiest for me - already done
-* services/xxx - ideal, but doesn't work!
-* state? 
-* event? 
 ### Services
 1. turn_off(entity, off_config)
 2. turn_off_all()
@@ -18,46 +10,42 @@ How to enable these services?
 5. publish_unoccupied_for()
 6. auto_off_app()
 
-## 0.5 New app: Entity Color
-I *really* don't like my dashboard. Part is HA's fault. If I did my JinjaPlus idea it would make it better.
 
-But I'd prefer to have all my "business logic" configuration with my app, not hidden in the dashboard. I'd like to define my states here, and then have the dashboard dumbly reference it. As I think about it, probably the easiest is a python file. So the config isnt' listed with the rest of my config, but that's ok. 
 
 ## 1. Autooff - reset when manual override
 This is like LightFade - if someone hits the swithc when it is within the fade period, cancel the fade.
 
 Here, if I'm away and I set the Ecobee to Home, I don't want it to automatically turn it off again!
 
-### How?
-* Track "state" of a climate - excluding offline
-    * climate.cabin.current_setting = away_55
-    * climate_gaym.current_setting = off
-    * climate.master_bath.current_setting = perm_hold_41
-* PERMANENT track last current_setting change
-    * Separte file? autoclimate.json
-    * History database?
-* Unoccupied time gets reset whenever current_setting changes
-    * unoccupied_time = now - max(last_occupied, last_setting_change)
-* ??: Do I need to make this configurable? Why wouldn't you use this?
-* ??: How do I *expose* this info so it's clear to the user what is going on and why?
-* ??: Is this sufficient? Can I do it automatically, or do I need to make it *signaled* 
-  like `mqtt.climate_cabin_setting_changed`. The good thing is the is *explicit*. The bad thing is you always need to use a custom button / code to change the thermostat. Can't just use the Ecobee. That seems bad. It feels like this should be avoided, but I keep feeling like if I try to do it automatically it will run into some problems, like my dimmer double tap did.
-* ??: Should this be tied to my home state? For instance, home_state=(home, away, leaving, **get_ready**). Maybe a *guard* for different auto-off rules? This feels unnecessary and complicated. 
-
-
 ## 3. error_off / auto-on
 Right now now I have an embedded rule that states: "{entity} is off but should not be! Attempting to turn on."
 
 This should be exposed and configurable.
 
-## 4. Clean up
-This is a big, complex file. I need to split up.
-
 ## 5. Auto-away mode?
 I should probably set HomeState to away automatically. Probably a different logic.
 
+## Flash - success / fail
 
 
+## WIP Docs
+
+* Currently implemented
+    * Public states
+        * app.autoclimate_state
+    * Sensors
+        * sensor.autoclimate_<climate>_temperature 
+        * sensor.autoclimate_<climate>_unoccupied_since
+    * listen_event triggers
+        * app.autoclimate_turn_off_all (w/ or w/o passed config)
+        * app.autoclimate_turn_off_climate (w/ or w/o passed config)
+    * Services
+        * WITHIN Appdaemon only. (Can't call from Hass)
+        * namespace: autoclimate
+            * autoclimate/is_on
+            * autoclimate/is_off
+            * autoclimate/is_hardoff
+            * autoclimate/_entity_state
 
 
 # AutoClimateApp for AppDaemon
