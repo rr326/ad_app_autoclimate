@@ -22,7 +22,7 @@ class Laston:
         test_mode: bool,
     ):
         self.hass = hass
-        self.config = config
+        self.aconfig = config
         self.appname = appname
         self.test_mode = test_mode
         self.climates = climates

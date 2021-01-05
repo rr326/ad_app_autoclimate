@@ -22,7 +22,7 @@ class TurnOff:
         turn_on_error_off=False,
     ):
         self.hass = hass
-        self.config = config
+        self.aconfig = config
         self.poll_frequency = poll_frequency
         self.appname = appname
         self.app_state_name = f"app.{self.appname}_state"
@@ -61,10 +61,10 @@ class TurnOff:
         climate.cabin:
             off_state: "away"
             off_temp:  55
-        config - if given, will use from self.config. If passed, will use passed config
+        config - if given, will use from self.aconfig. If passed, will use passed config
         """
         if config is None:
-            config = self.config[climate]
+            config = self.aconfig[climate]
         else:
             # Config passed in.
             schema = SCHEMA["entity_rules"]["valuesrules"]["schema"]
@@ -76,7 +76,7 @@ class TurnOff:
                 )
                 return
 
-        stateobj = self.hass.get_state(climate, attribute="all")
+        stateobj: dict = self.hass.get_state(climate, attribute="all") # type: ignore
         attributes = stateobj["attributes"]
 
         if "temperature" not in attributes:
@@ -149,7 +149,7 @@ class TurnOff:
         for climate, state in self.climate_state.items():
             self.hass.debug(f'autooff: {climate} - {state["state"]}')
 
-            config = self.config.get(climate)
+            config = self.aconfig.get(climate)
             if not config:
                 self.hass.log(f"autooff: No config. skipping {climate}")
                 continue

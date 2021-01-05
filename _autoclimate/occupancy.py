@@ -33,7 +33,7 @@ class Occupancy:
         test_mode: bool,
     ):
         self.hass = hass
-        self.config = config
+        self.aconfig = config
         self.appname = appname
         self.test_mode = test_mode
         self.climates = climates
@@ -109,7 +109,7 @@ class Occupancy:
             return sensor
         else:
             try:
-                oc_sensor = self.config[climate]["occupancy_sensor"]
+                oc_sensor = self.aconfig[climate]["occupancy_sensor"]
             except KeyError:
                 raise RuntimeError(f"Unable to get occupancy_sensor for {climate}")
             return oc_sensor

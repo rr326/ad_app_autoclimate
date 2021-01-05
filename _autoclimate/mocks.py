@@ -14,7 +14,7 @@ class Mocks:
         mock_delay: int = 1,
     ):
         self.hass = hass
-        self.config = mock_config
+        self.mconfig = mock_config
         self.run_mocks = run_mocks
         self.callbacks = mock_callbacks
         self.init_delay = init_delay
@@ -26,7 +26,7 @@ class Mocks:
     def init_mocks(self, kwargs):
         self.hass.log("Running Mocks")
         mock_delay = 0
-        for mock in self.config:
+        for mock in self.mconfig:
             self.hass.run_in(
                 self.run_mock,
                 mock_delay := mock_delay + self.mock_delay,

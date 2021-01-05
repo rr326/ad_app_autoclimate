@@ -22,7 +22,7 @@ class State:
         test_mode: bool,
     ):
         self.hass = hass
-        self.config = config
+        self.aconfig = config
         self.poll_frequency = poll_frequency
         self.appname = appname
         self.app_state_name = f"app.{self.appname}_state"
@@ -129,7 +129,7 @@ class State:
         return self.offstate(
             entity,
             state_obj,
-            self.config[entity],
+            self.aconfig[entity],
             self.hass,
             self.test_mode,
             mock_data,
