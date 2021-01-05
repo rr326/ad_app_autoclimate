@@ -1,7 +1,5 @@
 # TODO
 
-* Remove MQPlus
-
 ### Services
 1. turn_off(entity, off_config)
 2. turn_off_all()
@@ -16,11 +14,6 @@
 This is like LightFade - if someone hits the swithc when it is within the fade period, cancel the fade.
 
 Here, if I'm away and I set the Ecobee to Home, I don't want it to automatically turn it off again!
-
-## 3. error_off / auto-on
-Right now now I have an embedded rule that states: "{entity} is off but should not be! Attempting to turn on."
-
-This should be exposed and configurable.
 
 ## 5. Auto-away mode?
 I should probably set HomeState to away automatically. Probably a different logic.

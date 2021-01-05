@@ -89,7 +89,8 @@ class AutoClimate(adplus.Hass):
             appname=self.appname,
             climates=self.climates,
             test_mode=self.test_mode,
-            climate_state = self.climate_state
+            climate_state = self.climate_state,
+            turn_on_error_off=self.config["turn_on_error_off"]
         )        
 
         self.mock_module = Mocks(

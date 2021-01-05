@@ -22,6 +22,7 @@ class TurnOff:
         climates: list,
         test_mode: bool,
         climate_state: dict,
+        turn_on_error_off = False
     ):
         self.hass = hass
         self.config = config
@@ -31,6 +32,7 @@ class TurnOff:
         self.test_mode = test_mode
         self.climates = climates
         self.climate_state = climate_state
+        self.turn_on_error_off = turn_on_error_off
 
         self.state: dict = {}
         self._current_temps: dict = {}  # {climate: current_temp}
@@ -161,7 +163,7 @@ class TurnOff:
                 continue
             if state["offline"]:
                 continue  # Can't do anything
-            if state["state"] == "error_off":
+            if state["state"] == "error_off" and self.turn_on_error_off:
                 # Off but should not be
                 self.hass.log(
                     f"{climate} is off but should not be! Attempting to turn on."
