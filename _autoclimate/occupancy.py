@@ -39,7 +39,7 @@ class Occupancy:
         self.climates = climates
 
         self.hass.run_in(self.create_occupancy_sensors, 0)
-        self.hass.run_in(self.init_occupancy_listeners, 0.1)
+        # self.hass.run_in(self.init_occupancy_listeners, 0.1)
 
     def unoccupied_sensor_name(self, climate):
         return self.unoccupied_sensor_name_static(self.appname, climate)

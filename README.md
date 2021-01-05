@@ -1,4 +1,6 @@
 # TODO
+* Fix self.config - this is part of ADAPI! Need to do self.aconfig....
+* creeated entities - do not save initial 0 states. Garbage!
 
 ### Services
 1. turn_off(entity, off_config)

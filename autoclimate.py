@@ -8,6 +8,7 @@ import _autoclimate.mocks
 import _autoclimate.occupancy
 import _autoclimate.state
 import _autoclimate.turn_off
+import _autoclimate.laston
 
 
 adplus.importlib.reload(_autoclimate)
@@ -15,9 +16,11 @@ adplus.importlib.reload(_autoclimate.state)
 adplus.importlib.reload(_autoclimate.mocks)
 adplus.importlib.reload(_autoclimate.occupancy)
 adplus.importlib.reload(_autoclimate.turn_off)
+adplus.importlib.reload(_autoclimate.laston)
 
 from _autoclimate.mocks import Mocks
 from _autoclimate.occupancy import Occupancy
+from _autoclimate.laston import Laston
 from _autoclimate.state import State
 from _autoclimate.turn_off import TurnOff
 from _autoclimate.schema import SCHEMA
@@ -82,6 +85,15 @@ class AutoClimate(adplus.Hass):
             test_mode=self.test_mode,
         )
 
+        self.laston_module = Laston(
+            hass=self,
+            config=self.entity_rules,
+            appname=self.appname,
+            climates=self.climates,
+            appstate_entity=self.state_module.app_state_name,
+            test_mode=self.test_mode,
+        )
+
         self.turn_off_module = TurnOff(
             hass=self,
             config=self.entity_rules,
@@ -90,7 +102,7 @@ class AutoClimate(adplus.Hass):
             climates=self.climates,
             test_mode=self.test_mode,
             climate_state = self.climate_state,
-            turn_on_error_off=self.config["turn_on_error_off"]
+            turn_on_error_off=self.argsn["turn_on_error_off"]
         )        
 
         self.mock_module = Mocks(
