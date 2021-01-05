@@ -64,7 +64,7 @@ class TurnOff:
             off_temp:  55
         config - if given, will use from self.config. If passed, will use passed config
         """
-        if not config:
+        if config is None:
             config = self.config[climate]
         else:
             # Config passed in.
@@ -138,10 +138,9 @@ class TurnOff:
         return self.turn_off_climate(climate, config=config, test_mode=test_mode)
 
     def cb_turn_off_all(self, event_name, data, kwargs):
-        all_config = data.get("config", {})
         test_mode = data.get("test_mode")
         for climate in self.climates:
-            config = all_config.get(climate)
+            config = data["config"].get(climate, {}) if "config" in data else None
             self.turn_off_climate(climate, config=config, test_mode=test_mode)
 
     def autooff_scheduled_cb(self, kwargs):
