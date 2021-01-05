@@ -1,14 +1,11 @@
-import adplus
+import datetime as dt
 import json  # noqa
-import math
-from typing import Optional, Tuple
 
 import adplus
 from adplus import Hass
 
 adplus.importlib.reload(adplus)
-from _autoclimate.occupancy import Occupancy
-from _autoclimate.utils import climate_name
+from _autoclimate.laston import Laston
 from _autoclimate.schema import SCHEMA
 
 
@@ -22,7 +19,7 @@ class TurnOff:
         climates: list,
         test_mode: bool,
         climate_state: dict,
-        turn_on_error_off = False
+        turn_on_error_off=False,
     ):
         self.hass = hass
         self.config = config
@@ -172,15 +169,27 @@ class TurnOff:
                     self.hass.call_service("climate/turn_on", entity_id=climate)
                 self.hass.lb_log(f"{climate} - Turned thermostat on.")
 
-            duration_off = self.climate_state[f"{climate}_unoccupied"]
+            last_occupied = self.climate_state[f"{climate}_unoccupied"]
 
-            if duration_off is None:
-                self.hass.warn(f"Programming error - duration_off None for {climate}")
-            elif duration_off < 0:
+            if last_occupied is None:
+                self.hass.warn(f"Programming error - last_occupied None for {climate}")
+            elif last_occupied < 0:
                 self.hass.warn(
-                    f"Programming error - Negative duration off for {climate}: {duration_off}"
+                    f"Programming error - Negative duration off for {climate}: {last_occupied}"
                 )
-            elif duration_off > config["auto_off_hours"] or self.test_mode:
+            elif last_occupied > config["auto_off_hours"] or self.test_mode:
+                # Maybe turn off?
+
+                # First check to see if someone turned it on since last off.
+                laston_sensor = Laston.laston_sensor_name_static(self.appname, climate)
+                laston_date = self.hass.get_state(laston_sensor)
+                if isinstance(laston_date, dt.datetime) and laston_date > last_occupied:
+                    self.hass.lb_log(
+                        f"Autooff - NOT turning off {climate}. Last_occupied: {last_occupied}. But last turned on: {laston_date}"
+                    )
+                    continue
+
+                # Turn off
                 self.hass.lb_log(f"Autooff - Turning off {climate}")
                 if not self.test_mode:
                     self.turn_off_climate(climate)
