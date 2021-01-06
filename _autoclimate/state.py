@@ -48,9 +48,8 @@ class State:
 
     def create_hass_stateobj(self, kwargs):
         # APP_STATE
-        self.hass.set_state(
+        self.hass.update_state(
             self.app_state_name,
-            state="None",
             attributes={"friendly_name": f"{self.appname} State"},
         )
 
@@ -60,7 +59,6 @@ class State:
             sensor_name = self.sensor_name(climate)
             self.hass.update_state(
                 sensor_name,
-                state=math.nan,
                 attributes={
                     "unit_of_measurement": "°F",
                     "freindly_name": f"Temperatue for {climate_name(climate)}",

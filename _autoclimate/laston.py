@@ -44,7 +44,7 @@ class Laston:
         for climate in self.climates:
             laston_sensor_name = self.laston_sensor_name(climate)
             laston_date = self.find_laston_from_history(climate, history)
-            self.hass.set_state(
+            self.hass.update_state(
                 laston_sensor_name,
                 state=laston_date if laston_date else first_date,
                 attributes={
