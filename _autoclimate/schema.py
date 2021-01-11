@@ -26,7 +26,7 @@ SCHEMA = {
                     },
                 },
                 "occupancy_sensor": {"type": "string", "required": True},
-                "auto_off_hours": {"type": "number", "required": True},
+                "auto_off_hours": {"type": "number", "required": False},
             },
         },
     },
