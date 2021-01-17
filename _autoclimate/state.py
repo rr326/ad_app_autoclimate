@@ -327,6 +327,12 @@ class State:
         state = self.hass.get_state(entity_id=kwargs["climate"])
         return state == "off"
 
+    def is_error_off(self, namespace, domain, service, kwargs) -> bool:
+        return self.state[kwargs["climate"]]["state"] == "error_off"     
+
+    def is_error(self, namespace, domain, service, kwargs) -> bool:
+        return self.state[kwargs["climate"]]["state"] == "error"           
+
     def register_services(self, kwargs: dict):
         callbacks = [
             self.is_offline,
@@ -334,6 +340,8 @@ class State:
             self.is_off,
             self.entity_state,
             self.is_hardoff,
+            self.is_error_off,
+            self.is_error
         ]
         for callback in callbacks:
             service_name = f"{self.appname}/{callback.__name__}"
