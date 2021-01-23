@@ -169,23 +169,26 @@ class TurnOff:
                     self.hass.call_service("climate/turn_on", entity_id=climate)
                 self.hass.lb_log(f"{climate} - Turned thermostat on.")
 
-            last_occupied = self.climate_state[f"{climate}_unoccupied"]
+            hours_unoccupied = self.climate_state[climate]['unoccupied']
 
-            if last_occupied is None:
-                self.hass.warn(f"Programming error - last_occupied None for {climate}")
-            elif last_occupied < 0:
+            if hours_unoccupied is None: 
+                self.hass.warn(f"Programming error - hours_unoccupied None for {climate}")
+            elif hours_unoccupied < 0:
                 self.hass.warn(
-                    f"Programming error - Negative duration off for {climate}: {last_occupied}"
+                    f"Programming error - Negative duration off for {climate}: {hours_unoccupied}"
                 )
-            elif last_occupied > config["auto_off_hours"] or self.test_mode:
+            elif hours_unoccupied == 0:
+                # Currently off
+                pass
+            elif hours_unoccupied > config["auto_off_hours"] or self.test_mode:
                 # Maybe turn off?
 
                 # First check to see if someone turned it on since last off.
                 laston_sensor = Laston.laston_sensor_name_static(self.appname, climate)
                 laston_date = self.hass.get_state(laston_sensor)
-                if isinstance(laston_date, dt.datetime) and laston_date > last_occupied:
+                if isinstance(laston_date, dt.datetime) and laston_date > hours_unoccupied:
                     self.hass.lb_log(
-                        f"Autooff - NOT turning off {climate}. Last_occupied: {last_occupied}. But last turned on: {laston_date}"
+                        f"Autooff - NOT turning off {climate}. hours_unoccupied: {hours_unoccupied}. But last turned on: {laston_date}"
                     )
                     continue
 

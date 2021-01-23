@@ -39,7 +39,7 @@ class Occupancy:
         self.climates = climates
 
         self.hass.run_in(self.create_occupancy_sensors, 0)
-        # self.hass.run_in(self.init_occupancy_listeners, 0.1)
+        self.hass.run_in(self.init_occupancy_listeners, 0.1)
 
     def unoccupied_sensor_name(self, climate):
         return self.unoccupied_sensor_name_static(self.appname, climate)
@@ -138,6 +138,11 @@ class Occupancy:
 
     @staticmethod
     def duration_off_static(hass, dateval):
+        """
+        0           - currently on
+        > 0         - number hours off
+        < 0 / None  - Error
+        """
         if isinstance(dateval, str):
             dateval = dt.datetime.fromisoformat(dateval)
         if dateval.tzinfo is None:
@@ -145,7 +150,7 @@ class Occupancy:
 
         now = hass.get_now()
         if dateval > now:
-            return None
+            return 0
 
         duration_off_hours = round((now - dateval).total_seconds() / (60 * 60), 2)
         return duration_off_hours
