@@ -35,9 +35,13 @@ class TurnOff:
         self._current_temps: dict = {}  # {climate: current_temp}
 
         self.init_listeners()
-        self.hass.run_every(
-            self.autooff_scheduled_cb, "now", self.poll_frequency * 60 * 60
-        )
+
+        if not self.any_autooff():
+            self.hass.log("autooff: Not configured. Will not run.")
+        else:
+            self.hass.run_every(
+                self.autooff_scheduled_cb, "now", self.poll_frequency * 60 * 60
+            )
 
     def init_listeners(self):
         self.hass.listen_event(self.cb_turn_off_all, event=self.event_all_off_name())
@@ -142,6 +146,12 @@ class TurnOff:
             config = data["config"].get(climate, {}) if "config" in data else None
             self.turn_off_climate(climate, config=config, test_mode=test_mode)
 
+    def any_autooff(self):
+        for climate in self.climates:
+            if self.aconfig.get(climate, {}).get("auto_off_hours") != None:
+                return True
+        return False
+
     def autooff_scheduled_cb(self, kwargs):
         """
         Turn off any thermostats that have been on too long.
@@ -151,10 +161,8 @@ class TurnOff:
 
             config = self.aconfig.get(climate)
             if not config:
-                self.hass.log(f"autooff: No config. skipping {climate}")
                 continue
             if not "auto_off_hours" in config:
-                self.hass.log(f"autooff: No auto_off_hours for {climate}. Skipping.")
                 continue
             if state["state"] == "off":
                 continue

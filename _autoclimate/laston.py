@@ -66,7 +66,7 @@ class Laston:
         for climate in self.climates:
             key = f"{climate_name(climate)}_state"
 
-            if old["attributes"].get(key) == (newval := new["attributes"].get(key)):
+            if old.get("attributes",{}).get(key) == (newval := new["attributes"].get(key)):
                 continue
             if newval != "on":
                 continue
