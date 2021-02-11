@@ -1,5 +1,6 @@
 import datetime as dt
 import json  # noqa
+from typing import Union
 
 import adplus
 from adplus import Hass
@@ -193,8 +194,8 @@ class TurnOff:
 
                 # First check to see if someone turned it on since last off.
                 laston_sensor = Laston.laston_sensor_name_static(self.appname, climate)
-                laston_date = self.hass.get_state(laston_sensor)
-                if isinstance(laston_date, dt.datetime) and laston_date > hours_unoccupied:
+                laston_date = self.hass.get_state(laston_sensor)           
+                if  self.hours_since_laston(laston_date) > hours_unoccupied: 
                     self.hass.lb_log(
                         f"Autooff - NOT turning off {climate}. hours_unoccupied: {hours_unoccupied}. But last turned on: {laston_date}"
                     )
@@ -204,3 +205,9 @@ class TurnOff:
                 self.hass.lb_log(f"Autooff - Turning off {climate}")
                 if not self.test_mode:
                     self.turn_off_climate(climate)
+
+    def hours_since_laston(self, laston_date: Union[str, dt.datetime]) -> float:
+        if  isinstance(laston_date, str):
+            laston_date = dt.datetime.fromisoformat(laston_date)
+        now = self.hass.get_now() 
+        return (now - laston_date).seconds / (60*60) # type: ignore
