@@ -81,7 +81,7 @@ class TurnOff:
                 )
                 return
 
-        stateobj: dict = self.hass.get_state(climate, attribute="all") # type: ignore
+        stateobj: dict = self.hass.get_state(climate, attribute="all")  # type: ignore
         attributes = stateobj["attributes"]
 
         if "temperature" not in attributes:
@@ -178,10 +178,12 @@ class TurnOff:
                     self.hass.call_service("climate/turn_on", entity_id=climate)
                 self.hass.lb_log(f"{climate} - Turned thermostat on.")
 
-            hours_unoccupied = self.climate_state[climate]['unoccupied']
+            hours_unoccupied = self.climate_state[climate]["unoccupied"]
 
-            if hours_unoccupied is None: 
-                self.hass.warn(f"Programming error - hours_unoccupied None for {climate}")
+            if hours_unoccupied is None:
+                self.hass.warn(
+                    f"Programming error - hours_unoccupied None for {climate}"
+                )
             elif hours_unoccupied < 0:
                 self.hass.warn(
                     f"Programming error - Negative duration off for {climate}: {hours_unoccupied}"
@@ -194,9 +196,9 @@ class TurnOff:
 
                 # First check to see if someone turned it on since last off.
                 laston_sensor = Laston.laston_sensor_name_static(self.appname, climate)
-                laston_date = self.hass.get_state(laston_sensor)           
-                if  self.hours_since_laston(laston_date) > hours_unoccupied: 
-                    self.hass.lb_log(
+                laston_date = self.hass.get_state(laston_sensor)
+                if self.hours_since_laston(laston_date) < hours_unoccupied:
+                    self.hass.log(
                         f"Autooff - NOT turning off {climate}. hours_unoccupied: {hours_unoccupied}. But last turned on: {laston_date}"
                     )
                     continue
@@ -207,7 +209,7 @@ class TurnOff:
                     self.turn_off_climate(climate)
 
     def hours_since_laston(self, laston_date: Union[str, dt.datetime]) -> float:
-        if  isinstance(laston_date, str):
+        if isinstance(laston_date, str):
             laston_date = dt.datetime.fromisoformat(laston_date)
-        now = self.hass.get_now() 
-        return (now - laston_date).seconds / (60*60) # type: ignore
+        now = self.hass.get_now()
+        return (now - laston_date).seconds / (60 * 60)  # type: ignore
