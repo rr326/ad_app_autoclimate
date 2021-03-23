@@ -1,3 +1,12 @@
+# BUGS
+Offline / online bug:  
+T0 - cabin is on
+T+1 hr - Cabin is unoccupied
+T+2 hr - Cabin goes offline
+T+3    - Cabin goes online
+T+12   - Cabin should turn off but will not, because it looks like it was turned on after you left.
+
+
 # AutoClimateApp for AppDaemon
 This provides an app  and several lower-level services for thermostat management.
 
