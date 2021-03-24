@@ -1,12 +1,3 @@
-# BUGS
-Offline / online bug:  
-T0 - cabin is on
-T+1 hr - Cabin is unoccupied
-T+2 hr - Cabin goes offline
-T+3    - Cabin goes online
-T+12   - Cabin should turn off but will not, because it looks like it was turned on after you left.
-
-
 # AutoClimateApp for AppDaemon
 This provides an app  and several lower-level services for thermostat management.
 
@@ -46,7 +37,7 @@ This listens for changes to watched thermostat climate entities and creates a ma
 5. **Sensors: Unoccupied Since**  
 Creates sensors like `sensor.autoclimate_cabin_unoccupied_since: <timestamp>`. 
 6. **Sensors: Last On**  
-Creates sensors like `sensor.autoclimate_cabin_laston: <timestamp>`. This is the last time the climate was turned on. (Without this if you turn your climate on remotely to warm up your house, AutoOff will turn it back off. :) )
+Creates sensors like `sensor.autoclimate_cabin_laston: <timestamp>`. This is the last time the climate went from "off" to "on" (based on your autoclimate config). (Without this if you turn your climate on remotely to warm up your house, AutoOff will turn it back off. :) )
 7. **AppDaemon Services**  
 Creates AppDaemon services: `is_offline`, `is_on`, `is_off`, `entity_state`, `is_hardoff`. This makes it easy to build your own AppDaemon apps. (Note - you can NOT call these from HomeAssistant.) 
 8. **Test_mode with Mocks**  
