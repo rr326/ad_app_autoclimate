@@ -7,9 +7,9 @@ import _autoclimate
 import _autoclimate.laston
 import _autoclimate.mocks
 import _autoclimate.occupancy
+import _autoclimate.schema
 import _autoclimate.state
 import _autoclimate.turn_off
-import _autoclimate.schema
 
 adplus.importlib.reload(_autoclimate)
 adplus.importlib.reload(_autoclimate.state)

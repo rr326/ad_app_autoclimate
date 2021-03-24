@@ -1,9 +1,9 @@
 import datetime as dt
-from typing import List, Optional, Dict
 import json
+from typing import Dict, List, Optional
 
-from _autoclimate.utils import climate_name
 from _autoclimate.state import State
+from _autoclimate.utils import climate_name
 from adplus import Hass
 
 """
@@ -34,14 +34,13 @@ class Laston:
 
         self.hass.run_in(self.initialize_states, 0)
 
-
     def initialize_states(self, kwargs):
         for climate in self.climates:
             self.climate_states[climate] = TurnonState(self.hass, self.aconfig, climate)
-            
+
         # After initialization
         self.hass.run_in(self.create_laston_sensors, 0)
-        self.hass.run_in(self.init_laston_listeners, 0.1)            
+        self.hass.run_in(self.init_laston_listeners, 0.1)
 
     def laston_sensor_name(self, climate):
         return self.laston_sensor_name_static(self.appname, climate)
@@ -51,7 +50,7 @@ class Laston:
         return f"sensor.{appname}_{climate_name(climate)}_laston"
 
     def create_laston_sensors(self, kwargs):
-        history = self.get_history_data()
+        self.get_history_data()
         for climate in self.climates:
             laston_sensor_name = self.laston_sensor_name(climate)
             laston_date = self.climate_states[climate].last_turned_on
@@ -69,7 +68,9 @@ class Laston:
 
     def init_laston_listeners(self, kwargs):
         for climate in self.climates:
-            self.hass.listen_state(self.update_laston_sensors, entity=climate, attribute="all")
+            self.hass.listen_state(
+                self.update_laston_sensors, entity=climate, attribute="all"
+            )
 
     def update_laston_sensors(self, climate, attribute, old, new, kwargs):
         # Listener for climate entity
@@ -80,7 +81,9 @@ class Laston:
         sensor_state = self.hass.get_state(sensor_name)
         if sensor_state != laston_date:
             self.hass.update_state(sensor_name, state=laston_date)
-            self.hass.log(f"Updated state for {sensor_name}: {laston_date}. Previous: {old}")
+            self.hass.log(
+                f"Updated state for {sensor_name}: {laston_date}. Previous: {old}"
+            )
 
     def get_history_data(self, days: int = 10) -> List:
         data: List = self.hass.get_history(entity_id=self.appstate_entity, days=days)  # type: ignore
@@ -114,7 +117,7 @@ class TurnonState:
     .last_turned_on [property] -> None, datetime
         returns the last time a climate went from "off" to "on"
         (based on autoclimate config)
-        This requires the current state, the previous state, and the state before that. 
+        This requires the current state, the previous state, and the state before that.
     """
 
     def __init__(self, hass: Hass, config: dict, climate_entity: str) -> None:
@@ -164,7 +167,7 @@ class TurnonState:
     def last_turned_on(self) -> Optional[dt.datetime]:
         if self.curr == "on" and self.curr_m1 == "off":
             return self._curr_dt
-        elif self.curr=="off" and self.curr_m1 == "on" and self.curr_m2 == "off":
+        elif self.curr == "off" and self.curr_m1 == "on" and self.curr_m2 == "off":
             return self._curr_dt_m1
         else:
             return None
