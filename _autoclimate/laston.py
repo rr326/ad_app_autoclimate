@@ -38,8 +38,7 @@ class Laston:
     def initialize_states(self, kwargs):
         for climate in self.climates:
             self.climate_states[climate] = TurnonState(self.hass, self.aconfig, climate)
-            self.hass.log(self.climate_states[climate])
-        
+            
         # After initialization
         self.hass.run_in(self.create_laston_sensors, 0)
         self.hass.run_in(self.init_laston_listeners, 0.1)            
