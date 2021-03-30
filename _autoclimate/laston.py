@@ -82,7 +82,7 @@ class Laston:
         if sensor_state != laston_date:
             self.hass.update_state(sensor_name, state=laston_date)
             self.hass.log(
-                f"Updated state for {sensor_name}: {laston_date}. Previous: {old}"
+                f"Updated state for {sensor_name}: {laston_date}. Previous: {sensor_state}"
             )
 
     def get_history_data(self, days: int = 10) -> List:

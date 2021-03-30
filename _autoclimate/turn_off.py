@@ -212,4 +212,4 @@ class TurnOff:
         if isinstance(laston_date, str):
             laston_date = dt.datetime.fromisoformat(laston_date)
         now = self.hass.get_now()
-        return (now - laston_date).seconds / (60 * 60)  # type: ignore
+        return (now - laston_date).total_seconds() / (60 * 60)  # type: ignore
