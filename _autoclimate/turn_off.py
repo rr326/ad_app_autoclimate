@@ -1,6 +1,7 @@
 import datetime as dt
 import json  # noqa
 from typing import Union
+import pytz
 
 import adplus
 from adplus import Hass
@@ -209,7 +210,9 @@ class TurnOff:
                     self.turn_off_climate(climate)
 
     def hours_since_laston(self, laston_date: Union[str, dt.datetime]) -> float:
-        if isinstance(laston_date, str):
+        if laston_date in [None, "None"]:
+            laston_date = dt.datetime(dt.MINYEAR,1,1, tzinfo=pytz.timezone(str(self.hass.get_timezone())))
+        elif isinstance(laston_date, str):
             laston_date = dt.datetime.fromisoformat(laston_date)
         now = self.hass.get_now()
         return (now - laston_date).total_seconds() / (60 * 60)  # type: ignore

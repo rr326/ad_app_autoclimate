@@ -147,7 +147,7 @@ class TurnonState:
             )
 
         state = self.entity_state(stateobj)
-        assert state in ["on", "off", "offline"]
+        assert state in ["on", "off", "offline", "error_off"]
 
         if state == self.curr or state == "offline":
             return
