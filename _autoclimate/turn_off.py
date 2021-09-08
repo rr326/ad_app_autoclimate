@@ -1,3 +1,5 @@
+# pyright: reportUnusedCoroutine=false
+
 import datetime as dt
 import json  # noqa
 from typing import Union
@@ -5,10 +7,12 @@ import pytz
 
 import adplus
 from adplus import Hass
+from typing import Optional
 
 adplus.importlib.reload(adplus)
 from _autoclimate.laston import Laston
 from _autoclimate.schema import SCHEMA
+from _autoclimate.utils import in_inactive_period
 
 
 class TurnOff:
@@ -16,6 +20,7 @@ class TurnOff:
         self,
         hass: Hass,
         config: dict,
+        inactive_period: Optional[bool],
         poll_frequency: int,
         appname: str,
         climates: list,
@@ -25,6 +30,7 @@ class TurnOff:
     ):
         self.hass = hass
         self.aconfig = config
+        self.inactive_period = inactive_period
         self.poll_frequency = poll_frequency
         self.appname = appname
         self.app_state_name = f"app.{self.appname}_state"
@@ -158,6 +164,9 @@ class TurnOff:
         """
         Turn off any thermostats that have been on too long.
         """
+        if in_inactive_period(self.hass, self.inactive_period):
+            return 
+            
         for climate, state in self.climate_state.items():
             self.hass.debug(f'autooff: {climate} - {state["state"]}')
 
