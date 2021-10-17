@@ -1,3 +1,27 @@
+# Bug (4/22/21): Away mode is not permanent
+
+Sometime this winter my system behavior changed. I'm pretty sure the following is what is going on:
+
+* Autoclimate sets the system to "Away"
+* The ecobee sets it back to "Home" on the next scheduled run
+* I think it comes from [#46613](https://github.com/home-assistant/core/pull/46613) / [#40520](https://github.com/home-assistant/core/pull/40520)
+* If you look in ecobee/climate.py, you'll see
+
+```python
+        if preset_mode == PRESET_AWAY:
+            self.data.ecobee.set_climate_hold(
+                self.thermostat_index, "away", "indefinite", self.hold_hours()
+            )
+```
+
+* The function signature is `def set_preset_mode(self, preset_mode):` 
+* As far as I can tell there is no way to override the default. So if you set the ecobee to "Until next scheduled" it
+  will **always** do that. Which, of course, sucks.
+* Todo - for now, until next winter, just deal with it. (One solution is permanent hold). But winter is pretty much over.
+* Next winter, test and see if HA core has fixed this. I think this is a bug but I don't feel like raising it, 
+  because since I am using Appdaemon, I can't give them a clean test case.
+
+
 # AutoClimateApp for AppDaemon
 This provides an app  and several lower-level services for thermostat management.
 
@@ -37,7 +61,7 @@ This listens for changes to watched thermostat climate entities and creates a ma
 5. **Sensors: Unoccupied Since**  
 Creates sensors like `sensor.autoclimate_cabin_unoccupied_since: <timestamp>`. 
 6. **Sensors: Last On**  
-Creates sensors like `sensor.autoclimate_cabin_laston: <timestamp>`. This is the last time the climate was turned on. (Without this if you turn your climate on remotely to warm up your house, AutoOff will turn it back off. :) )
+Creates sensors like `sensor.autoclimate_cabin_laston: <timestamp>`. This is the last time the climate went from "off" to "on" (based on your autoclimate config). (Without this if you turn your climate on remotely to warm up your house, AutoOff will turn it back off. :) )
 7. **AppDaemon Services**  
 Creates AppDaemon services: `is_offline`, `is_on`, `is_off`, `entity_state`, `is_hardoff`. This makes it easy to build your own AppDaemon apps. (Note - you can NOT call these from HomeAssistant.) 
 8. **Test_mode with Mocks**  

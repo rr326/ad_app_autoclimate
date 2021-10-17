@@ -1,13 +1,18 @@
+# pyright: reportUnusedCoroutine=false
+
 import datetime as dt
 import json  # noqa
 from typing import Union
+import pytz
 
 import adplus
 from adplus import Hass
+from typing import Optional
 
 adplus.importlib.reload(adplus)
 from _autoclimate.laston import Laston
 from _autoclimate.schema import SCHEMA
+from _autoclimate.utils import in_inactive_period
 
 
 class TurnOff:
@@ -15,6 +20,7 @@ class TurnOff:
         self,
         hass: Hass,
         config: dict,
+        inactive_period: Optional[bool],
         poll_frequency: int,
         appname: str,
         climates: list,
@@ -24,6 +30,7 @@ class TurnOff:
     ):
         self.hass = hass
         self.aconfig = config
+        self.inactive_period = inactive_period
         self.poll_frequency = poll_frequency
         self.appname = appname
         self.app_state_name = f"app.{self.appname}_state"
@@ -81,7 +88,7 @@ class TurnOff:
                 )
                 return
 
-        stateobj: dict = self.hass.get_state(climate, attribute="all") # type: ignore
+        stateobj: dict = self.hass.get_state(climate, attribute="all")  # type: ignore
         attributes = stateobj["attributes"]
 
         if "temperature" not in attributes:
@@ -157,6 +164,9 @@ class TurnOff:
         """
         Turn off any thermostats that have been on too long.
         """
+        if in_inactive_period(self.hass, self.inactive_period):
+            return 
+            
         for climate, state in self.climate_state.items():
             self.hass.debug(f'autooff: {climate} - {state["state"]}')
 
@@ -178,10 +188,12 @@ class TurnOff:
                     self.hass.call_service("climate/turn_on", entity_id=climate)
                 self.hass.lb_log(f"{climate} - Turned thermostat on.")
 
-            hours_unoccupied = self.climate_state[climate]['unoccupied']
+            hours_unoccupied = self.climate_state[climate]["unoccupied"]
 
-            if hours_unoccupied is None: 
-                self.hass.warn(f"Programming error - hours_unoccupied None for {climate}")
+            if hours_unoccupied is None:
+                self.hass.warn(
+                    f"Programming error - hours_unoccupied None for {climate}"
+                )
             elif hours_unoccupied < 0:
                 self.hass.warn(
                     f"Programming error - Negative duration off for {climate}: {hours_unoccupied}"
@@ -194,9 +206,9 @@ class TurnOff:
 
                 # First check to see if someone turned it on since last off.
                 laston_sensor = Laston.laston_sensor_name_static(self.appname, climate)
-                laston_date = self.hass.get_state(laston_sensor)           
-                if  self.hours_since_laston(laston_date) > hours_unoccupied: 
-                    self.hass.lb_log(
+                laston_date = self.hass.get_state(laston_sensor)
+                if self.hours_since_laston(laston_date) < hours_unoccupied:
+                    self.hass.log(
                         f"Autooff - NOT turning off {climate}. hours_unoccupied: {hours_unoccupied}. But last turned on: {laston_date}"
                     )
                     continue
@@ -207,7 +219,9 @@ class TurnOff:
                     self.turn_off_climate(climate)
 
     def hours_since_laston(self, laston_date: Union[str, dt.datetime]) -> float:
-        if  isinstance(laston_date, str):
+        if laston_date in [None, "None"]:
+            laston_date = dt.datetime(dt.MINYEAR,1,1, tzinfo=pytz.timezone(str(self.hass.get_timezone())))
+        elif isinstance(laston_date, str):
             laston_date = dt.datetime.fromisoformat(laston_date)
-        now = self.hass.get_now() 
-        return (now - laston_date).seconds / (60*60) # type: ignore
+        now = self.hass.get_now()
+        return (now - laston_date).total_seconds() / (60 * 60)  # type: ignore

@@ -328,10 +328,10 @@ class State:
         return state == "off"
 
     def is_error_off(self, namespace, domain, service, kwargs) -> bool:
-        return self.state[kwargs["climate"]]["state"] == "error_off"     
+        return self.state[kwargs["climate"]]["state"] == "error_off"
 
     def is_error(self, namespace, domain, service, kwargs) -> bool:
-        return self.state[kwargs["climate"]]["state"] == "error"           
+        return self.state[kwargs["climate"]]["state"] == "error"
 
     def register_services(self, kwargs: dict):
         callbacks = [
@@ -341,7 +341,7 @@ class State:
             self.entity_state,
             self.is_hardoff,
             self.is_error_off,
-            self.is_error
+            self.is_error,
         ]
         for callback in callbacks:
             service_name = f"{self.appname}/{callback.__name__}"
