@@ -145,7 +145,7 @@ class AutoClimate(adplus.Hass):
                 )
 
         # inactive_period: mm/dd - mm/dd
-        if self.argsn["inactive_period"]:
+        if self.argsn.get("inactive_period"):
             try:
                 match = re.match(r"(\d?\d)/(\d?\d)\s*-\s*(\d?\d)/(\d?\d)", self.argsn["inactive_period"])
                 start = (int(match.group(1)), int(match.group(2))) # type: ignore
