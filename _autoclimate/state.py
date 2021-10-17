@@ -345,5 +345,5 @@ class State:
         ]
         for callback in callbacks:
             service_name = f"{self.appname}/{callback.__name__}"
-            self.hass.register_service(service_name, callback, namespace=self.appname)
+            self.hass.register_service(service_name, callback)
             self.hass.log(f"Registered service: {service_name}")
