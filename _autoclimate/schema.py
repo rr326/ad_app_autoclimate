@@ -5,7 +5,7 @@ SCHEMA = {
     "run_mocks": {"required": False, "type": "boolean", "default": False},
     "create_temp_sensors": {"required": True, "type": "boolean"},
     "turn_on_error_off": {"required": False, "type": "boolean", "default": True},
-    "inactive_period": { # See "extra_validation" for validation rules
+    "inactive_period": {  # See "extra_validation" for validation rules
         "required": False,
         "type": "string",
     },

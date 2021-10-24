@@ -2,12 +2,11 @@
 
 import datetime as dt
 import json  # noqa
-from typing import Union
-import pytz
+from typing import Optional, Union
 
 import adplus
+import pytz
 from adplus import Hass
-from typing import Optional
 
 adplus.importlib.reload(adplus)
 from _autoclimate.laston import Laston
@@ -165,8 +164,8 @@ class TurnOff:
         Turn off any thermostats that have been on too long.
         """
         if in_inactive_period(self.hass, self.inactive_period):
-            return 
-            
+            return
+
         for climate, state in self.climate_state.items():
             self.hass.debug(f'autooff: {climate} - {state["state"]}')
 
@@ -220,7 +219,9 @@ class TurnOff:
 
     def hours_since_laston(self, laston_date: Union[str, dt.datetime]) -> float:
         if laston_date in [None, "None"]:
-            laston_date = dt.datetime(dt.MINYEAR,1,1, tzinfo=pytz.timezone(str(self.hass.get_timezone())))
+            laston_date = dt.datetime(
+                dt.MINYEAR, 1, 1, tzinfo=pytz.timezone(str(self.hass.get_timezone()))
+            )
         elif isinstance(laston_date, str):
             laston_date = dt.datetime.fromisoformat(laston_date)
         now = self.hass.get_now()

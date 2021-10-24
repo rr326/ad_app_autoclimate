@@ -160,7 +160,7 @@ class TurnonState:
             self._curr_dt = last_updated
 
     def entity_state(self, stateobj: dict) -> str:
-        """Return summarized state based on config: on, off, offline """
+        """Return summarized state based on config: on, off, offline"""
         return State.offstate(self.climate_entity, stateobj, self.config, self.hass)[0]
 
     @property
