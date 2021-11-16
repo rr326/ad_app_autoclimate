@@ -92,9 +92,9 @@ class Occupancy:
             unoccupied_sensor_name,
             state=last_on_date,
         )
-        self.hass.log(
-            f"update_occupancy_sensor - {unoccupied_sensor_name} - state: {last_on_date}"
-        )
+        # self.hass.log(
+        #     f"update_occupancy_sensor - {unoccupied_sensor_name} - state: {last_on_date}"
+        # )
 
     def get_sensor(self, climate=None, sensor=None):
         if climate and sensor:
