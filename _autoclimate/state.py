@@ -179,7 +179,7 @@ class State:
                     )
                     if last_on_date == Occupancy.UNOCCUPIED_SINCE_OCCUPIED_VALUE:
                         self.state[entity]["unoccupied"] = False
-                    elif last_on_date is None:
+                    elif last_on_date in [None, "off"]:
                         self.state[entity]["unoccupied"] = None
                     else:
                         self.state[entity][
