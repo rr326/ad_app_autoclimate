@@ -123,7 +123,7 @@ class AutoClimate(adplus.Hass):
             mock_delay=1,
         )
 
-    def extra_validation(self, args):
+    def extra_validation(self, argsn):
         # Validation that Cerberus doesn't do well
 
         # entity_rules
@@ -138,17 +138,17 @@ class AutoClimate(adplus.Hass):
                     )
 
             state = self.get_state(climate, attribute="all")
-            if state == None:
+            if state is None:
                 self.error(
                     f"Probable misconfiguration (bad entity): could not get state for entity: {climate}"
                 )
 
         # inactive_period: mm/dd - mm/dd
-        if self.argsn.get("inactive_period"):
+        if argsn.get("inactive_period"):
             try:
                 match = re.match(
                     r"(\d?\d)/(\d?\d)\s*-\s*(\d?\d)/(\d?\d)",
-                    self.argsn["inactive_period"],
+                    argsn["inactive_period"],
                 )
                 start = (int(match.group(1)), int(match.group(2)))  # type: ignore
                 end = (int(match.group(3)), int(match.group(4)))  # type: ignore
@@ -159,7 +159,7 @@ class AutoClimate(adplus.Hass):
                     and 1 <= end[1] <= 31
                 ):
                     raise Error(
-                        f'Invalid day or month value in inactive_period ({self.argsn["inactive_period"]})'
+                        f'Invalid day or month value in inactive_period ({argsn["inactive_period"]})'
                     )
             except Exception as err:
                 self.error(
