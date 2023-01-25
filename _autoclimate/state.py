@@ -321,7 +321,9 @@ class State:
         return self.state[kwargs["climate"]]["state"] == "off"
 
     def entity_state(self, namespace, domain, service, kwargs) -> Optional[str]:
-        self.hass.log(f">>DEBUG: entity_state: {kwargs['climate']} = {self.state[kwargs['climate']]['state']}")
+        self.hass.log(
+            f">>DEBUG: entity_state: {kwargs['climate']} = {self.state[kwargs['climate']]['state']}"
+        )
         return self.state[kwargs["climate"]]["state"]
 
     def is_hardoff(self, namespace, domain, service, kwargs) -> bool:
