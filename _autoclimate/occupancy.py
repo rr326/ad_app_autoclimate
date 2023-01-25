@@ -76,7 +76,7 @@ class Occupancy:
             self.hass.log(f"listen_state: {oc_sensor}")
             self.hass.listen_state(
                 self.update_occupancy_sensor,
-                entity=oc_sensor,
+                entity_id=oc_sensor,
                 attribute="all",
                 climate=climate,
             )
@@ -120,7 +120,6 @@ class Occupancy:
         elif state in ["off", "unavailable"]:
             return last_on_date
         else:
-            self.hass.log(f"Unexpected last_on_date state: {state}")
             # Error or offline
             return None
 

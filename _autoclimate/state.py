@@ -79,7 +79,7 @@ class State:
     def init_climate_listeners(self, kwargs):
         for climate in self.climates:
             self.hass.listen_state(
-                self.get_and_publish_state, entity=climate, attribute="all"
+                self.get_and_publish_state, entity_id=climate, attribute="all"
             )
 
     def sensor_name(self, entity):

@@ -69,7 +69,7 @@ class Laston:
     def init_laston_listeners(self, kwargs):
         for climate in self.climates:
             self.hass.listen_state(
-                self.update_laston_sensors, entity=climate, attribute="all"
+                self.update_laston_sensors, entity_id=climate, attribute="all"
             )
 
     def update_laston_sensors(self, climate, attribute, old, new, kwargs):
