@@ -10,7 +10,7 @@ def climate_name(entity):
 
 
 def in_inactive_period(hass: Hass, inactive_period) -> bool:
-    if in_inactive_period is None:
+    if inactive_period is None:
         return False
 
     try:
@@ -22,5 +22,5 @@ def in_inactive_period(hass: Hass, inactive_period) -> bool:
         end = dt.datetime(year, ip[1][0], ip[1][1], tzinfo=tzinfo)
         return start <= now < end
     except Exception as err:
-        hass.log(f"Error testing inactive period. err: {err}")
+        hass.log(f"Error testing inactive period. err: {err}, ip: {ip}")
         return False

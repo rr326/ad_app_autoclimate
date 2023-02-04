@@ -7,7 +7,7 @@ from adplus import Hass
 
 adplus.importlib.reload(adplus)
 from _autoclimate.occupancy import Occupancy
-from _autoclimate.utils import climate_name
+from _autoclimate.utils import climate_name, in_inactive_period
 
 
 class State:
@@ -20,6 +20,7 @@ class State:
         climates: list,
         create_temp_sensors: bool,
         test_mode: bool,
+        inactive_period: Optional[str]
     ):
         self.hass = hass
         self.aconfig = config
@@ -29,6 +30,7 @@ class State:
         self.test_mode = test_mode
         self.use_temp_sensors = create_temp_sensors
         self.climates = climates
+        self.inactive_period = inactive_period
 
         self.state: dict = {}
         self._current_temps: dict = {}  # {climate: current_temp}
@@ -131,6 +133,7 @@ class State:
             self.hass,
             self.test_mode,
             mock_data,
+            self.inactive_period
         )
 
     def get_all_entities_state(self, *args, mock_data: Optional[dict] = None):
@@ -220,6 +223,7 @@ class State:
         hass: Hass,
         test_mode: bool = False,
         mock_data: Optional[dict] = None,
+        inactive_period: Optional[str] = None
     ) -> Tuple[str, str, float]:
         """
         Returns: on/off/offline, reason, current_temp
@@ -263,7 +267,10 @@ class State:
             if offconfig["state"] == "off":
                 return "off", "Thermostat is off", current_temp
             else:
-                return "error_off", "Thermostat is off but should not be!", current_temp
+                if not in_inactive_period(hass, inactive_period):
+                    return "error_off", "Thermostat is off but should not be!", current_temp
+                else:
+                    return "off", "Thermostat is off in inactive_period", current_temp
 
         # Thermostat is on.
         elif offconfig["state"] == "off":
