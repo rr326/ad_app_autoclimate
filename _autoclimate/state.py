@@ -110,7 +110,7 @@ class State:
         if self.use_temp_sensors:
             for climate, current_temp in self._current_temps.items():
                 sensor_name = self.sensor_name(climate)
-                self.hass.update_state(sensor_name, state=current_temp)
+                self.hass.update_state(sensor_name, state=(current_temp if not math.isnan(current_temp) else None))
 
         # self.log(
         #     f"DEBUG LOGGING\nPublished State\n============\n{json.dumps(data, indent=2)}"
