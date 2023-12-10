@@ -161,10 +161,10 @@ class Occupancy:
 
         All based on an occupancy sensor's history data.
         {
-            "entity_id": "binary_sensor.seattle_occupancy",
+            "entity_id": "binary_sensor.cabin_occupancy",
             "state": "off", # on/off/unavailable
             "attributes": {
-                "friendly_name": "Seattle Occupancy",
+                "friendly_name": "Cabin Occupancy",
                 "device_class": "occupancy"
             },
             "last_changed": "2020-10-28T13:10:47.384057+00:00",
