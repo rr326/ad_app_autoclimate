@@ -82,7 +82,7 @@ class AutoClimate(adplus.Hass):
             climates=self.climates,
             create_temp_sensors=self.argsn["create_temp_sensors"],
             test_mode=self.test_mode,
-            inactive_period=self.inactive_period
+            inactive_period=self.inactive_period,
         )
         self.climate_state = self.state_module.state
 

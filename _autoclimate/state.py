@@ -20,7 +20,7 @@ class State:
         climates: list,
         create_temp_sensors: bool,
         test_mode: bool,
-        inactive_period: Optional[str]
+        inactive_period: Optional[str],
     ):
         self.hass = hass
         self.aconfig = config
@@ -110,7 +110,10 @@ class State:
         if self.use_temp_sensors:
             for climate, current_temp in self._current_temps.items():
                 sensor_name = self.sensor_name(climate)
-                self.hass.update_state(sensor_name, state=(current_temp if not math.isnan(current_temp) else None))
+                self.hass.update_state(
+                    sensor_name,
+                    state=(current_temp if not math.isnan(current_temp) else None),
+                )
 
         # self.log(
         #     f"DEBUG LOGGING\nPublished State\n============\n{json.dumps(data, indent=2)}"
@@ -133,7 +136,7 @@ class State:
             self.hass,
             self.test_mode,
             mock_data,
-            self.inactive_period
+            self.inactive_period,
         )
 
     def get_all_entities_state(self, *args, mock_data: Optional[dict] = None):
@@ -223,7 +226,7 @@ class State:
         hass: Hass,
         test_mode: bool = False,
         mock_data: Optional[dict] = None,
-        inactive_period: Optional[str] = None
+        inactive_period: Optional[str] = None,
     ) -> Tuple[str, str, float]:
         """
         Returns: on/off/offline, reason, current_temp
@@ -268,7 +271,11 @@ class State:
                 return "off", "Thermostat is off", current_temp
             else:
                 if not in_inactive_period(hass, inactive_period):
-                    return "error_off", "Thermostat is off but should not be!", current_temp
+                    return (
+                        "error_off",
+                        "Thermostat is off but should not be!",
+                        current_temp,
+                    )
                 else:
                     return "off", "Thermostat is off in inactive_period", current_temp
 
