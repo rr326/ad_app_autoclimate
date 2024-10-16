@@ -166,6 +166,7 @@ A few sub points:
 * The sensor name is: `sensor.{name}_{climate_entity_name}_temperature`
 * Return value when offline: `math.nan`
 * [Github Issue](https://github.com/home-assistant/core/issues/43897)
+* [FIXED Github](https://github.com/home-assistant/core/pull/51873)
 
 ## Sensors: _unoccupied_since
 See the description above in Features.
