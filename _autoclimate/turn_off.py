@@ -110,15 +110,15 @@ class TurnOff:
         #
         # https://community.home-assistant.io/t/documenting-behavior-of-ecobee-home-assistant-and-preset-holding/504340?u=rr326
         # There is a very odd behavior in the ecobee climate mode. 
-        # "away" is a special, indefinite AWAY hold controlled by Home Assistant.
-        # "Away" is the ecobee preset, which will change based on the "hold behavior"
+        # "away_indefinitely" is a special, indefinite AWAY hold controlled by Home Assistant.
+        # "away" is the ecobee preset, which will change based on the "hold behavior"
         #       setting. And if that setting is "choose at time", it will actually change at the next scheduled time!
         elif config["off_state"]["state"] == "away":
             if not test_mode:
                 self.hass.call_service(
                     "climate/set_preset_mode",
                     entity_id=climate,
-                    preset_mode="away",
+                    preset_mode="away_indefinitely",
                     return_result=False,
                 )
             self.hass.lb_log(f"{climate} -  Set away mode")
