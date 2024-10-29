@@ -285,7 +285,7 @@ class State:
 
         # Is away mode?
         elif offconfig["state"] == "away":
-            if attributes.get("preset_mode").lower() != "away":
+            if attributes.get("preset_mode").lower() != "away_indefinitely":
                 return "on", "Not away mode, but should be", current_temp
             else:
                 # Proper away mode setting?
