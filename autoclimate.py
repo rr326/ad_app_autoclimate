@@ -60,10 +60,10 @@ class AutoClimate(adplus.Hass):
         self.inactive_period = None
         self.extra_validation(self.argsn)
         if in_inactive_period(self, self.inactive_period):
-            self.log(f"Autoclimate in inactive_period - will not use shutoff rules.")
+            self.log("Autoclimate in inactive_period - will not use shutoff rules.")
 
         self.test_mode = self.argsn.get("test_mode")
-        self.appname = self.argsn["name"]
+        self.appname = self.argsn["name"].lower()
         self.poll_frequency = self.argsn["poll_frequency"]
 
         self.TRIGGER_HEAT_OFF = f"app.{self.appname}_turn_off_all"
@@ -123,6 +123,7 @@ class AutoClimate(adplus.Hass):
             init_delay=1,
             mock_delay=1,
         )
+        self.log("Done initializing")
 
     def extra_validation(self, argsn):
         # Validation that Cerberus doesn't do well

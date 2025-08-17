@@ -109,7 +109,7 @@ class TurnOff:
         # Set to "away"
         #
         # https://community.home-assistant.io/t/documenting-behavior-of-ecobee-home-assistant-and-preset-holding/504340?u=rr326
-        # There is a very odd behavior in the ecobee climate mode. 
+        # There is a very odd behavior in the ecobee climate mode.
         # "away_indefinitely" is a special, indefinite AWAY hold controlled by Home Assistant.
         # "away" is the ecobee preset, which will change based on the "hold behavior"
         #       setting. And if that setting is "choose at time", it will actually change at the next scheduled time!

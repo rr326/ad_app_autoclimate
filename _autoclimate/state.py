@@ -31,22 +31,29 @@ class State:
         self.use_temp_sensors = create_temp_sensors
         self.climates = climates
         self.inactive_period = inactive_period
+        self.is_initialized = False
 
         self.state: dict = {}
         self._current_temps: dict = {}  # {climate: current_temp}
+        self.hass.warn("Appdaemon 4.5.11 has a bug in run_in with 0 delay. "
+                       "Using run_in with 1 second delay instead.")
+        run_delay = 1  # it seems that run_in with 0 delay is no lonoger working
+
+        self.hass.run_in(self.autoclimate_register_services, run_delay)
 
         self.init_states()
 
-        self.hass.run_in(self.create_hass_stateobj, 0)
-        if self.use_temp_sensors:
-            self.hass.run_in(self.create_temp_sensors, 0)
-        self.hass.run_in(self.init_climate_listeners, 0)
+        self.hass.run_in(self.create_hass_stateobj, run_delay)
 
+        if self.use_temp_sensors:
+            self.hass.run_in(self.create_temp_sensors, run_delay)
+
+        self.hass.run_in(self.init_climate_listeners, run_delay)
+
+        self.hass.run_in(self.get_and_publish_state, run_delay + 5)  # initialize
         self.hass.run_every(
             self.get_and_publish_state, "now", 60 * 60 * self.poll_frequency
         )
-
-        self.hass.run_in(self.register_services, 0)
 
     def create_hass_stateobj(self, kwargs):
         # APP_STATE
@@ -188,13 +195,16 @@ class State:
                     elif last_on_date in [None, "off"]:
                         self.state[entity]["unoccupied"] = None
                     else:
-                        self.state[entity][
-                            "unoccupied"
-                        ] = Occupancy.duration_off_static(self.hass, last_on_date)
+                        self.state[entity]["unoccupied"] = (
+                            Occupancy.duration_off_static(self.hass, last_on_date)
+                        )
                 except Exception as err:
                     self.hass.error(
                         f"Error getting occupancy for {entity}. Err: {err}."
                     )
+        if not self.is_initialized:
+            self.is_initialized = True
+            self.hass.log("State is initialized. All values are now available.")
 
     @property
     def autoclimate_overall_state(self):
@@ -335,6 +345,14 @@ class State:
         return self.state[kwargs["climate"]]["state"] == "off"
 
     def entity_state(self, namespace, domain, service, kwargs) -> Optional[str]:
+        if not self.is_initialized:
+            self.hass.warn("State is not initialized yet. All values will be None")
+            return self.state[kwargs["climate"]]["state"]
+        import json
+
+        self.hass.log(
+            f"entity_state: kwargs: {kwargs}, self.state: \n{json.dumps(self.state, indent=4)}"
+        )
         self.hass.log(
             f">>DEBUG: entity_state: {kwargs['climate']} = {self.state[kwargs['climate']]['state']}"
         )
@@ -350,7 +368,7 @@ class State:
     def is_error(self, namespace, domain, service, kwargs) -> bool:
         return self.state[kwargs["climate"]]["state"] == "error"
 
-    def register_services(self, kwargs: dict):
+    def autoclimate_register_services(self, kwargs: dict):
         callbacks = [
             self.is_offline,
             self.is_on,
@@ -361,6 +379,8 @@ class State:
             self.is_error,
         ]
         for callback in callbacks:
-            service_name = f"{self.appname}/{callback.__name__}"
-            self.hass.register_service(service_name, callback)
-            self.hass.log(f"Registered service: {service_name}")
+            service_name = f"autoclimate/{callback.__name__}"
+            self.hass.register_service(service_name, callback, namespace="default")
+            self.hass.log(
+                f"Registered service: {service_name}",
+            )
