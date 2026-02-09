@@ -102,7 +102,7 @@ class TurnOff:
         if config["off_state"]["state"] == "off":
             if not test_mode:
                 self.hass.call_service(
-                    "climate/turn_off", entity_id=climate, return_result=False
+                    "climate/turn_off", entity_id=climate
                 )
             self.hass.lb_log(f"{climate} - Turn off")
 
@@ -119,7 +119,6 @@ class TurnOff:
                     "climate/set_preset_mode",
                     entity_id=climate,
                     preset_mode="away_indefinitely",
-                    return_result=False,
                 )
             self.hass.lb_log(f"{climate} -  Set away mode")
 
@@ -130,13 +129,11 @@ class TurnOff:
                     "climate/set_temperature",
                     entity_id=climate,
                     temperature=config["off_state"]["temp"],
-                    return_result=False,
                 )
                 self.hass.call_service(
                     "climate/set_preset_mode",
                     entity_id=climate,
                     preset_mode="Permanent Hold",
-                    return_result=False,
                 )
             self.hass.log(
                 f"{climate} - Set Perm Hold to {config['off_state']['temp']}. "
@@ -196,7 +193,7 @@ class TurnOff:
                 )
                 if not self.test_mode:
                     self.hass.call_service(
-                        "climate/turn_on", entity_id=climate, return_result=False
+                        "climate/turn_on", entity_id=climate
                     )
                 self.hass.lb_log(f"{climate} - Turned thermostat on.")
 
