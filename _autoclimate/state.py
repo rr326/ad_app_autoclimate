@@ -35,9 +35,7 @@ class State:
 
         self.state: dict = {}
         self._current_temps: dict = {}  # {climate: current_temp}
-        self.hass.warn("Appdaemon 4.5.11 has a bug in run_in with 0 delay. "
-                       "Using run_in with 1 second delay instead.")
-        run_delay = 1  # it seems that run_in with 0 delay is no lonoger working
+        run_delay = 0
 
         self.hass.run_in(self.autoclimate_register_services, run_delay)
 
