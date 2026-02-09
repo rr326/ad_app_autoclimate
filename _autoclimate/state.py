@@ -348,14 +348,14 @@ class State:
         if not self.is_initialized:
             self.hass.warn("State is not initialized yet. All values will be None")
             return self.state[kwargs["climate"]]["state"]
-        import json
+        # import json
 
-        self.hass.log(
-            f"entity_state: kwargs: {kwargs}, self.state: \n{json.dumps(self.state, indent=4)}"
-        )
-        self.hass.log(
-            f">>DEBUG: entity_state: {kwargs['climate']} = {self.state[kwargs['climate']]['state']}"
-        )
+        # self.hass.log(
+        #     f"entity_state: kwargs: {kwargs}, self.state: \n{json.dumps(self.state, indent=4)}"
+        # )
+        # self.hass.log(
+        #     f">>DEBUG: entity_state: {kwargs['climate']} = {self.state[kwargs['climate']]['state']}"
+        # )
         return self.state[kwargs["climate"]]["state"]
 
     def is_hardoff(self, namespace, domain, service, kwargs) -> bool:
