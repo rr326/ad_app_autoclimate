@@ -136,6 +136,15 @@ class Occupancy:
         return state, duration_off, last_on_date
 
     @staticmethod
+    def _as_datetime(val):
+        # HA's get_history may return last_updated as either an ISO string
+        # (older HA versions) or a datetime object (current). Normalize to
+        # datetime; an unexpected type still raises a clear TypeError below.
+        if isinstance(val, dt.datetime):
+            return val
+        return dt.datetime.fromisoformat(val)
+
+    @staticmethod
     def duration_off_static(hass, dateval):
         """
         0           - currently on
@@ -194,15 +203,16 @@ class Occupancy:
         now: dt.datetime = self.hass.get_now()  # type: ignore
         for rec in edata:
             if rec.get("state") == "on":
-                last_on_date = dt.datetime.fromisoformat(rec["last_updated"])
+                last_on_date = self._as_datetime(rec["last_updated"])
                 duration_off_hours = round(
                     (now - last_on_date).total_seconds() / (60 * 60), 2
                 )
                 return current_state, duration_off_hours, last_on_date
 
         # Can not find a last on time. Give the total time shown.
+        # total_seconds() (not .seconds) so durations > 24h aren't truncated.
         min_time_off = round(
-            (now - dt.datetime.fromisoformat(edata[-1]["last_updated"])).seconds
+            (now - self._as_datetime(edata[-1]["last_updated"])).total_seconds()
             / (60 * 60),
             2,
         )
