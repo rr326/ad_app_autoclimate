@@ -2,9 +2,10 @@ import datetime as dt
 import json
 from typing import Dict, List, Optional
 
+from adplus import Hass
+
 from _autoclimate.state import State
 from _autoclimate.utils import climate_name
-from adplus import Hass
 
 """
 Laston - create new sensors that track the last time the climate 

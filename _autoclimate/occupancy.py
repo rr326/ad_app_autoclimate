@@ -1,9 +1,10 @@
 import datetime as dt
 from typing import List
 
-from _autoclimate.utils import climate_name
 from adplus import Hass
 from dateutil import tz
+
+from _autoclimate.utils import climate_name
 
 """
 Create new sensors
@@ -99,11 +100,11 @@ class Occupancy:
     def get_sensor(self, climate=None, sensor=None):
         if climate and sensor:
             raise RuntimeError(
-                f"Programming error - history_last_on_date: give climate OR sensor"
+                "Programming error - history_last_on_date: give climate OR sensor"
             )
         elif climate is None and sensor is None:
             raise RuntimeError(
-                f"Programming error - need a climate or sensor. Got None."
+                "Programming error - need a climate or sensor. Got None."
             )
         elif sensor:
             return sensor

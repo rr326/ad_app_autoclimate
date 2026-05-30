@@ -81,7 +81,7 @@ class TurnOff:
             schema = SCHEMA["entity_rules"]["valuesrules"]["schema"]
             try:
                 config = adplus.normalized_args(self.hass, schema, config)
-            except adplus.ConfigException as err:
+            except adplus.ConfigException:
                 self.hass.error(
                     f"turn_off_climate called with passed-in config that does not validate: {config}"
                 )
@@ -180,7 +180,7 @@ class TurnOff:
             config = self.aconfig.get(climate)
             if not config:
                 continue
-            if not "auto_off_hours" in config:
+            if "auto_off_hours" not in config:
                 continue
             if state["state"] == "off":
                 continue
